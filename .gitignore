@@ -1,0 +1,19 @@
+__pycache__/
+.idea/
+
+*.csv
+
+config.py
+
+/logs/
+ *.txt
+
+.ipynb_checkpoints/
+*.ipynb
+
+.venv
+venv
+.env
+env
+
+Files/
