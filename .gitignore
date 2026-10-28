@@ -8,8 +8,8 @@ config.py
 /logs/
  *.txt
 
-.ipynb_checkpoints/
-*.ipynb
+ipynb_checkpoints
+ipynb
 
 .venv
 venv
