@@ -1,1 +1,92 @@
-Search for <50% missing value columns, and drop
+Phase 1: Structural & Constant Column Filtering (Drop)
+
+        Rule: Drop columns that have zero variance (unique_val == 1) or
+        act as unique system/bank identifiers that will cause severe model overfitting.
+
+Columns to Drop:
+
+    activity_year (Index 0 – Unique val: 1)
+    state_code (Index 3 – Unique val: 1)
+    loan_purpose (Index 16 – Unique val: 1)
+    lei (Index 1 – Unique val: 934, high-cardinality bank identifier)
+
+Phase 2: Data Leakage Prevention (Drop)
+Rule: Drop features that are recorded after or as a direct result of the
+target decision (action_taken), as they give away the answer.
+
+Columns to Drop:
+
+    purchaser_type (Index 13)
+    denial_reason-1 (Index 88)
+    denial_reason-2 (Index 89)
+    denial_reason-3 (Index 90)
+    denial_reason-4 (Index 91)
+
+
+Phase 3: High Missing Value Thresholding ($\ge 50\%$ Missing — Drop)
+Rule: Drop columns missing half or more of their values to prevent artificial pattern creation via bad imputation.
+
+Columns to Drop:
+
+    total_points_and_fees (Index 27 – 95.69% missing)
+    discount_points (Index 29 – 58.20% missing)
+    lender_credits (Index 30 – 72.33% missing)
+    prepayment_penalty_term (Index 32 – 96.14% missing)
+    intro_rate_period (Index 33 – 88.01% missing)
+    multifamily_affordable_units (Index 44 – 96.16% missing)
+    applicant_ethnicity-2 through -5 (Indices 50–53 – 95.40% to 100% missing)
+    co-applicant_ethnicity-2 through -5 (Indices 55–58 – 98.71% to 100% missing)
+    applicant_race-2 through -5 (Indices 62–65 – 94.13% to 99.99% missing)
+    co-applicant_race-2 through -5 (Indices 67–70 – 97.69% to 100% missing)
+    co-applicant_age_above_62 (Index 80 – 59.44% missing)
+    aus-2 through aus-5 (Indices 84–87 – 90.78% to 98.45% missing)
+
+
+Phase 4: Low-to-Moderate Missing Value Handling ($< 50\%$ Missing — Impute & Keep)
+Rule: Retain these features and handle missing data via median imputation (for numerical features) or mode/missing-category encoding.
+
+Columns to Keep & Impute:
+
+    county_code (Index 4 – 0.62%)
+    census_tract (Index 5 – 1.01%)
+    conforming_loan_limit (Index 6 – 0.60%)
+    loan_to_value_ratio (Index 22 – 6.00%)
+    interest_rate (Index 23 – 11.02%)
+    rate_spread (Index 24 – 19.52%)
+    total_loan_costs (Index 26 – 25.17%)
+    origination_charges (Index 28 – 23.96%)
+    loan_term (Index 31 – 0.31%)
+    property_value (Index 38 – 1.42%)
+    income (Index 45 – 5.83%)
+    debt_to_income_ratio (Index 46 – 6.12%)
+    applicant_ethnicity-1 (Index 49 – 0.03%)
+    co-applicant_ethnicity-1 (Index 54 – 0.01%)
+    applicant_race-1 (Index 61 – 0.02%)
+    co-applicant_race-1 (Index 66 – 0.01%)
+    applicant_age_above_62 (Index 79 – 4.45%)
+
+
+Phase 5: Datatype Transformation & Feature Encoding (Clean & Prepare)
+Rule A (String-to-Numeric Conversion): Clean financial/ratio columns currently stored as str (stripping out special symbols/text like <20%) and convert them to float64:
+
+    loan_to_value_ratio (Index 22)
+    interest_rate (Index 23)
+    rate_spread (Index 24)
+    total_loan_costs (Index 26)
+    origination_charges (Index 28)
+    loan_term (Index 31)
+    property_value (Index 38)
+    total_units (Index 43)
+    debt_to_income_ratio (Index 46)
+    applicant_age (Index 77)
+    co-applicant_age (Index 78)
+
+
+Rule B (Binary & Categorical Encoding):
+Binary Mapping (0/1): preapproval (Index 14), lien_status (Index 17), reverse_mortgage (Index 18), open-end_line_of_credit (Index 19), business_or_commercial_purpose (Index 20), negative_amortization (Index 34), interest_only_payment (Index 35), balloon_payment (Index 36), other_nonamortizing_features (Index 37), construction_method (Index 39).
+
+One-Hop/Label Encoding ($3 \le \text{Unique Vals} \le 15$): derived_msa-md (Index 2), derived_loan_product_type (Index 7), derived_dwelling_category (Index 8), derived_ethnicity (Index 9), derived_race (Index 10), derived_sex (Index 11), loan_type (Index 15), hoepa_status (Index 25), occupancy_type (Index 40), manufactured_home_secured_property_type (Index 41), manufactured_home_land_property_interest (Index 42), submission_of_application (Index 81), initially_payable_to_institution (Index 82).
+
+Rule C (Remaining Clean Tract/Geographic Numerical Features - Keep As-Is):
+
+census_tract (Index 5), tract_population (Index 92), tract_minority_population_percent (Index 93), ffiec_msa_md_median_family_income (Index 94), tract_to_msa_income_percentage (Index 95), tract_owner_occupied_units (Index 96), tract_one_to_four_family_homes (Index 97), tract_median_age_of_housing_units (Index 98).
