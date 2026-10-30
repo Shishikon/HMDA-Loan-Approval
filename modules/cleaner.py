@@ -105,29 +105,65 @@
 """""
 
 
-
 import pandas as pd
+pd.set_option('display.max_rows', None)
 
+pd.set_option('display.max_columns', None)
 
-def constant_val(df: pd.DataFrame) -> pd.DataFrame:
-    temp_df = df.copy()
+raw = pd.read_csv('../actions_taken_1-2-3_loan_purposes_1_state_PA.csv', low_memory=False)
 
-    uniq_counter = []
-    for col in temp_df.columns:
-        unique_count = df[col].nunique()
-
-
+copy = raw.copy()
 
 
 
 
 
 
+# Unique value
+def one_value(df: pd.DataFrame) -> pd.DataFrame:
+    uniq_1 = df.columns[df.nunique() == 1]
+    return df.drop(columns=uniq_1)
+copy = one_value(copy)
 
 
 
+# High cardinality
+cardinals = ["lei",]
 
 
 
+# Data leakage
+def leaker(df: pd.DataFrame) -> pd.DataFrame:
+    leakers = ["purchaser_type", "denial_reason-1", "denial_reason-2",
+               "denial_reason-3", "denial_reason-4"]
+
+    return df.drop(columns=leakers, errors="ignore")
+copy = leaker(copy)
 
 
+
+# High missingness
+def high_missing(df: pd.DataFrame) -> pd.DataFrame:
+    missers = []
+    for col in df.columns:
+        missing_count = df[col].isna().sum()
+        missing_rate = (missing_count / df.shape[0]) * 100
+        if missing_rate >= 50:
+            missers.append(col)
+    return df.drop(columns=missers, errors="ignore")
+
+copy = high_missing(copy)
+
+
+# Handle Missing Values
+def median_imputer(df: pd.DataFrame) -> pd.DataFrame:
+    lll = ["county_code", "census_tract", "conforming_loan_limit",
+           "loan_to_value_ratio", "interest_rate", "rate_spread",
+           "total_loan_costs", "origination_charges", "loan_term",
+           "property_value", 'income', "debt_to_income_ratio",
+           "applicant_ethnicity-1", "co-applicant_ethnicity-1",
+           "applicant_race-1", "co-applicant_race-1",
+           "applicant_age_above_62"]
+    # print(df[lll].head(3).to_string())
+    return df
+median_imputer(copy)
