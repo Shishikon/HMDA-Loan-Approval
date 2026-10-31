@@ -67,7 +67,10 @@ Columns to Keep & Impute:
 
 
 Phase 5: Datatype Transformation & Feature Encoding (Clean & Prepare)
-Rule A (String-to-Numeric Conversion): Clean financial/ratio columns currently stored as str (stripping out special symbols/text like <20%) and convert them to float64:
+Rule A (String-to-Numeric Conversion):
+Clean financial/ratio columns currently stored as
+str (stripping out special symbols/text like <20%)
+and convert them to float64:
 
     loan_to_value_ratio (Index 22)
     interest_rate (Index 23)
@@ -90,3 +93,24 @@ One-Hop/Label Encoding ($3 \le \text{Unique Vals} \le 15$): derived_msa-md (Inde
 Rule C (Remaining Clean Tract/Geographic Numerical Features - Keep As-Is):
 
 census_tract (Index 5), tract_population (Index 92), tract_minority_population_percent (Index 93), ffiec_msa_md_median_family_income (Index 94), tract_to_msa_income_percentage (Index 95), tract_owner_occupied_units (Index 96), tract_one_to_four_family_homes (Index 97), tract_median_age_of_housing_units (Index 98).
+
+
+
+# While mapping i am handling missing values. Non mapping columns TO BE FULFILLED
+
+
+
+Check with:
+
+# Create a quick summary dataframe of your columns, dtypes, and sample values
+summary_df = pd.DataFrame({
+    'Data Type': copy.dtypes,
+    'Non-Null Count': copy.notnull().sum(),
+    'Sample Values': [copy[col].dropna().unique()[:3].tolist() for col in copy.columns]
+})
+
+
+
+
+
+
