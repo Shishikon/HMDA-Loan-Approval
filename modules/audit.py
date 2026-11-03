@@ -1,5 +1,4 @@
 import pandas as pd
-from tornado import template
 
 
 def auditor(df: pd.DataFrame) -> pd.DataFrame:
@@ -19,7 +18,7 @@ def auditor(df: pd.DataFrame) -> pd.DataFrame:
     return audit_df
 
 
-def summary(df: pd.DataFrame) -> pd.DataFrame:
+def summarizer(df: pd.DataFrame) -> pd.DataFrame:
     temp_df = df.copy()
 
     summary_data = {
