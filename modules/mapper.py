@@ -82,7 +82,7 @@ def mapper(df: pd.DataFrame) -> pd.DataFrame:
                                                  .astype('string').str.strip().str.replace(' ', '_', regex=False))
 
 
-    # business_or_commercial_purpose
+    # hoepa_status
     temp_df['hoepa_status'] = temp_df['hoepa_status'].map({
         1: 'High-cost mortgage',
         2: 'Not high-cost',
@@ -118,7 +118,7 @@ def mapper(df: pd.DataFrame) -> pd.DataFrame:
                                   .astype('string').str.strip().str.replace(' ', '_', regex=False))
 
 
-    # balloon_payment
+    # other_nonamortizing_features
     temp_df['other_nonamortizing_features'] = temp_df['other_nonamortizing_features'].map({
         1: 'Yes',
         2: 'No',
@@ -136,7 +136,7 @@ def mapper(df: pd.DataFrame) -> pd.DataFrame:
 
     # occupancy_type
     temp_df['occupancy_type'] = temp_df['occupancy_type'].map({
-        1: 'Site-built',
+        1: 'Principal residence',
         2: 'Second residence',
         3: 'Investment property'})
     temp_df['occupancy_type'] = (temp_df['occupancy_type'].fillna('Missing')
@@ -405,10 +405,6 @@ def mapper(df: pd.DataFrame) -> pd.DataFrame:
 
 
     # applicant_age_above_62
-    temp_df['applicant_age_above_62'] = temp_df['applicant_age_above_62'].map({
-        'Yes': 'Yes',
-        'No': 'No',
-    })
     temp_df['applicant_age_above_62'] = (temp_df['applicant_age_above_62'].fillna('Exempt')
                                          .astype('string').str.strip().str.replace(' ', '_', regex=False))
 

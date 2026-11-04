@@ -8,7 +8,7 @@ def one_value(df: pd.DataFrame) -> pd.DataFrame:
 
 # High cardinality
 def cardinals(df: pd.DataFrame) -> pd.DataFrame:
-    cardinal = "lei"
+    cardinal = ["lei"]
     return df.drop(columns=cardinal)
 
 
@@ -49,18 +49,25 @@ def transformer(df: pd.DataFrame) -> pd.DataFrame:
     return temp_df
 
 
+def filler_fit(df):
+    stats = {}
+    median_cols = ['loan_to_value_ratio', 'interest_rate', 'rate_spread',
+                   'total_loan_costs', 'origination_charges', 'loan_term',
+                   'property_value', 'debt_to_income_ratio']
+    mode_cols = ['county_code', 'census_tract', 'income']
 
-def filler(df: pd.DataFrame) -> pd.DataFrame:
+    for col in median_cols:
+        if col in df.columns:
+            stats[col] = df[col].median()
+    for col in mode_cols:
+        if col in df.columns:
+            stats[col] = df[col].mode()[0]
+    return stats
+
+
+def filler_transform(df, stats):
     temp_df = df.copy()
-    mode = ['county_code','census_tract',
-            'loan_to_value_ratio','interest_rate',
-            'rate_spread','total_loan_costs',
-            'origination_charges','loan_term',
-            'property_value','income',
-            'debt_to_income_ratio']
-
-    for col in mode:
+    for col, value in stats.items():
         if col in temp_df.columns:
-            if temp_df[col].isna().any():
-                temp_df[col] = temp_df[col].fillna(temp_df[col].mode()[0])
+            temp_df[col] = temp_df[col].fillna(value)
     return temp_df
