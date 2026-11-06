@@ -2,12 +2,14 @@ import pandas as pd
 import numpy as np
 from sklearn.compose import ColumnTransformer
 from sklearn.dummy import DummyClassifier
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.impute import SimpleImputer
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score, confusion_matrix, \
     ConfusionMatrixDisplay
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.metrics import classification_report
 
 from EDA import *
 
@@ -41,7 +43,6 @@ copy = mapper(copy)
 RANDOM_STATE = 42
 
 numeric_cols = ['loan_amount', 'loan_to_value_ratio',
-    'interest_rate', 'rate_spread', 'total_loan_costs', 'origination_charges',
     'loan_term', 'property_value', 'income', 'debt_to_income_ratio',
     'tract_population', 'tract_minority_population_percent',
     'ffiec_msa_md_median_family_income', 'tract_to_msa_income_percentage',
@@ -52,11 +53,10 @@ numeric_cols = ['loan_amount', 'loan_to_value_ratio',
 ]
 
 
-categorical_cols = [
-    'conforming_loan_limit', 'derived_loan_product_type', 'derived_ethnicity',
+categorical_cols = ['conforming_loan_limit', 'derived_loan_product_type', 'derived_ethnicity',
     'derived_race', 'derived_sex', 'preapproval', 'loan_type', 'lien_status',
     'reverse_mortgage', 'open-end_line_of_credit', 'business_or_commercial_purpose',
-    'hoepa_status', 'negative_amortization', 'interest_only_payment',
+    'negative_amortization', 'interest_only_payment',
     'balloon_payment', 'other_nonamortizing_features', 'construction_method',
     'occupancy_type', 'manufactured_home_secured_property_type',
     'manufactured_home_land_property_interest', 'applicant_credit_score_type',
@@ -91,6 +91,7 @@ X_train, X_valid, y_train, y_valid = train_test_split(
     X_trainval, y_trainval, test_size=0.2,
     random_state=RANDOM_STATE, stratify=y_trainval
 )
+
 
 
 
@@ -161,15 +162,17 @@ dummy.fit(X_train, y_train)
 
 baseline_valid = evaluator("Dummy baseline", dummy, X_valid, y_valid)
 """
-{'model': 'Dummy baseline', 
-'accuracy': 0.860956568557071, 
-'precision': 0.7412462129415666, 
-'recall': 0.860956568557071, 
-'f1': 0.7966292448364942}
+{'model': 'Dummy baseline',
+'accuracy': 0.860956568557071,
+'precision': 0.7412462129415666,
+'recall': 0.860956568557071,
+'f1': 0.7966292448364942},
+'macro_f1': 0.3084279640925493
 """
 
-# Logistic Regression
 
+
+# Logistic Regression
 from sklearn.linear_model import LogisticRegression
 
 logistic = Pipeline(steps=[
@@ -197,40 +200,98 @@ logistic_balanced.fit(X_train, y_train)
 
 logistic_valid = evaluator("Logistic model", logistic, X_valid, y_valid)
 
+
+"""
+Before leakers droped:
+
+{'model': 'Logistic model',
+'accuracy': 0.9551776740847092,
+'precision': 0.9544206818326683,
+'recall': 0.9551776740847092,
+'f1': 0.9497421884803898,
+'macro_f1': 0.7341193255858962}
+
+
+After leakers droped:
+
+{'model': 'Logistic model', 
+'accuracy': 0.8898061737257718, 
+'precision': 0.869006518127738, 
+'recall': 0.8898061737257718, 
+'f1': 0.8640432138868192, 
+'macro_f1': 0.4932932257230885}
+"""
+
 logistic_balanced_valid = evaluator("Logistic model Balanced", logistic_balanced, X_valid, y_valid)
 
+"""
+Before leakers droped:
+
+{'model': 'Logistic model Balanced',
+'accuracy': 0.8979720028715004,
+'precision': 0.9428364493038996,
+'recall': 0.8979720028715004,
+'f1': 0.91631674805584,
+'macro_f1': 0.6650087487152049}
 
 
+After leakers droped:
 
-from sklearn.metrics import classification_report
+{'model': 'Logistic model Balanced', 
+'accuracy': 0.6996141421392678, 
+'precision': 0.8391852979152764, 
+'recall': 0.6996141421392678, 
+'f1': 0.7535906109649437, 
+'macro_f1': 0.4418807012886437}
+
+
+"""
+
 
 
 # Confusion Matrix
-cm = confusion_matrix(y_valid, logistic_balanced.predict(X_valid))
+cm = confusion_matrix(y_valid, logistic.predict(X_valid))
 
 disp = ConfusionMatrixDisplay(confusion_matrix=cm,
-    display_labels=['Denied', 'Approved not accepted', 'Originated'])
+    display_labels=['Denied', 'Approved Not Accepted', 'Originated'])
+
+disp.plot(cmap='Blues')
+plt.title('Logistic Regression - Validation Set')
+plt.tight_layout()
+# plt.show()
 
 
-check_cols = [
-    'derived_msa-md',
-    'county_code',
-    'applicant_credit_score_type',
-    'co-applicant_credit_score_type',
-    'derived_loan_product_type',
-    'preapproval',
-    'loan_type',
-    'occupancy_type',
-    'submission_of_application'
-]
 
-for col in check_cols:
-    print(f"\n--- {col} ---")
-    print(copy[col].value_counts(dropna=False).head(20))
+# Random Forest Classifier
+r_forest = Pipeline(steps=[
+    ('preprocessor', preprocessor_not_scaled),
+    ('model', RandomForestClassifier(
+        n_estimators=100,
+        random_state=RANDOM_STATE
+    ))
+])
+
+r_forest.fit(X_train, y_train)
+r_forest_valid = evaluator("Random Forest", r_forest, X_valid, y_valid)
 
 
-missing = copy[numeric_cols + categorical_cols].isna().sum()
+"""
+Before leakers droped:
 
-missing = missing[missing > 0].sort_values(ascending=False)
+{'model': 'Random Forest', 
+'accuracy': 0.9899497487437185, 
+'precision': 0.9898800527729477, 
+'recall': 0.9899497487437185, 
+'f1': 0.9895653430341331, 
+'macro_f1': 0.9447280301513942}
 
-print(missing)
+After leakers droped:
+{'model': 'Random Forest', 
+'accuracy': 0.9002153625269204, 
+'precision': 0.8862592391093689, 
+'recall': 0.9002153625269204, 
+'f1': 0.8815770823404169, 
+'macro_f1': 0.5747637398511648}
+
+
+"""
