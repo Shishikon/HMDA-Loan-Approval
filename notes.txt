@@ -67,12 +67,16 @@ Step 9 — Final evaluation on test set (run once, report final numbers — don�
 Commits:
 
 
-after the first randomforest model i have found some data leakers:
+After the first randomforest model i have found some data leakers:
 
-'interest_rate'
-'rate_spread'
-'total_loan_costs'
-'origination_charges'
+'interest_rate', 'rate_spread', 'total_loan_costs', 'origination_charges'
 
-'hoepa_status'
-, and they are to be droped.
+'hoepa_status', ]and they are to be droped.
+
+
+
+
+RandomForestClassifier:
+
+Choosing class_weight=balanced because classes are imbalanced (86% originated)
+and because missing denials has real business cost is a strong justified argument.
