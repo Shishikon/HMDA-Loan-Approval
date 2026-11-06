@@ -4,18 +4,24 @@ from sklearn.compose import ColumnTransformer
 from sklearn.dummy import DummyClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.impute import SimpleImputer
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score, confusion_matrix, \
-    ConfusionMatrixDisplay
+from sklearn.metrics import (accuracy_score, precision_score, recall_score, f1_score,
+                             roc_auc_score, confusion_matrix, ConfusionMatrixDisplay)
+from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.metrics import classification_report
+import matplotlib.pyplot as plt
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+from sklearn.tree import DecisionTreeClassifier
 
-from EDA import *
-
-from modules.audit import auditor, summarizer
 from cleaner import one_value, cardinals, leaker, high_missing, transformer, filler_fit, filler_transform
+from EDA import *
+from modules.audit import auditor, summarizer
 from mapper import mapper
+
+
+
 
 pd.set_option('display.max_rows', None)
 
@@ -84,13 +90,11 @@ X = copy.drop(columns=['action_taken'])
 y = copy['action_taken']
 
 X_trainval, X_test, y_trainval, y_test = train_test_split(
-    X, y, test_size=0.2, random_state=RANDOM_STATE, stratify=y
-)
+    X, y, test_size=0.2, random_state=RANDOM_STATE, stratify=y)
 
 X_train, X_valid, y_train, y_valid = train_test_split(
     X_trainval, y_trainval, test_size=0.2,
-    random_state=RANDOM_STATE, stratify=y_trainval
-)
+    random_state=RANDOM_STATE, stratify=y_trainval)
 
 
 
@@ -99,35 +103,24 @@ numeric_scaled = Pipeline([
     ("imputer", SimpleImputer(strategy="median")),
     ("scaler", StandardScaler())
 ])
-
-
-
-
 numeric_not_scaled = Pipeline([
     ("imputer", SimpleImputer(strategy="median"))
 ])
-
-
-
 
 categorical_pipeline = Pipeline([
     ("imputer", SimpleImputer(strategy="most_frequent")),
     ("encoder", OneHotEncoder(handle_unknown="ignore", sparse_output=False))
 ])
 
-
 preprocessor_scaled = ColumnTransformer(transformers=[
     ('num', numeric_scaled, numeric_cols),
     ('cat', categorical_pipeline, categorical_cols),
 ], remainder='drop')
-
 preprocessor_not_scaled = ColumnTransformer(transformers=[
     ('num', numeric_not_scaled, numeric_cols),
     ('cat', categorical_pipeline, categorical_cols),
 ], remainder='drop')
 
-
-from sklearn.metrics import f1_score
 
 def evaluator(name, model, X_data, y_true):
     pred = model.predict(X_data)
@@ -152,14 +145,12 @@ def evaluator(name, model, X_data, y_true):
 
 
 
-
+# ==============================Dummy START==============================
 dummy = Pipeline(steps=[
     ('preprocessor', preprocessor_scaled),
     ('model', DummyClassifier(strategy="most_frequent"))
 ])
-
 dummy.fit(X_train, y_train)
-
 baseline_valid = evaluator("Dummy baseline", dummy, X_valid, y_valid)
 """
 {'model': 'Dummy baseline',
@@ -169,21 +160,17 @@ baseline_valid = evaluator("Dummy baseline", dummy, X_valid, y_valid)
 'f1': 0.7966292448364942},
 'macro_f1': 0.3084279640925493
 """
+# ==============================Dummy END==============================
 
 
 
-# Logistic Regression
-from sklearn.linear_model import LogisticRegression
-
-logistic = Pipeline(steps=[
+# ==============================Logistic Regression START==============================
+logistic_pipeline = Pipeline(steps=[
     ('preprocessor', preprocessor_scaled),
     ('model', LogisticRegression(
         max_iter=1000,
-        random_state=RANDOM_STATE
-    ))
-])
-
-logistic_balanced = Pipeline(steps=[
+        random_state=RANDOM_STATE))])
+logistic_pipeline_balanced = Pipeline(steps=[
     ('preprocessor', preprocessor_scaled),
     ('model', LogisticRegression(
         max_iter=1000,
@@ -193,16 +180,12 @@ logistic_balanced = Pipeline(steps=[
     ))
 ])
 
+logistic_pipeline.fit(X_train, y_train)
+logistic_pipeline_balanced.fit(X_train, y_train)
 
-logistic.fit(X_train, y_train)
-logistic_balanced.fit(X_train, y_train)
-
-
-logistic_valid = evaluator("Logistic model", logistic, X_valid, y_valid)
-
-
+logistic_valid = evaluator("Logistic model", logistic_pipeline, X_valid, y_valid)
 """
-Before leakers droped:
+Before leakers dropped:
 
 {'model': 'Logistic model',
 'accuracy': 0.9551776740847092,
@@ -211,8 +194,7 @@ Before leakers droped:
 'f1': 0.9497421884803898,
 'macro_f1': 0.7341193255858962}
 
-
-After leakers droped:
+After leakers dropped:
 
 {'model': 'Logistic model', 
 'accuracy': 0.8898061737257718, 
@@ -222,10 +204,8 @@ After leakers droped:
 'macro_f1': 0.4932932257230885}
 """
 
-logistic_balanced_valid = evaluator("Logistic model Balanced", logistic_balanced, X_valid, y_valid)
-
 """
-Before leakers droped:
+Before leakers dropped:
 
 {'model': 'Logistic model Balanced',
 'accuracy': 0.8979720028715004,
@@ -235,7 +215,7 @@ Before leakers droped:
 'macro_f1': 0.6650087487152049}
 
 
-After leakers droped:
+After leakers dropped:
 
 {'model': 'Logistic model Balanced', 
 'accuracy': 0.6996141421392678, 
@@ -243,37 +223,40 @@ After leakers droped:
 'recall': 0.6996141421392678, 
 'f1': 0.7535906109649437, 
 'macro_f1': 0.4418807012886437}
-
-
 """
-
-
+logistic_balanced_valid = evaluator("Logistic model Balanced", logistic_pipeline_balanced, X_valid, y_valid)
 
 # Confusion Matrix
-cm = confusion_matrix(y_valid, logistic.predict(X_valid))
+def log_confusion_matrix(model, X_valid, y_valid, logger=None):
+    preds = model.predict(X_valid)
+    cm = confusion_matrix(y_valid, preds)
 
-disp = ConfusionMatrixDisplay(confusion_matrix=cm,
-    display_labels=['Denied', 'Approved Not Accepted', 'Originated'])
+    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=['Denied', 'Approved Not Accepted', 'Originated'])
+    disp.plot(cmap='Blues')
+    plt.title('Logistic Regression - Validation Set')
+    plt.tight_layout()
+    plt.show()
 
-disp.plot(cmap='Blues')
-plt.title('Logistic Regression - Validation Set')
-plt.tight_layout()
-# plt.show()
+# log_confusion_matrix(model=logistic_pipeline, X_valid=X_valid, y_valid=y_valid, logger=logistic_pipeline)
+# log_confusion_matrix(model=logistic_pipeline, X_valid=X_valid, y_valid=y_valid, logger=logistic_pipeline_balanced)
 
+# ==============================Logistic Regression END==============================
+
+
+
+# ==============================Random Forest Classifier START==============================
 
 
 # Random Forest Classifier
-r_forest = Pipeline(steps=[
+r_forest_pipeline = Pipeline(steps=[
     ('preprocessor', preprocessor_not_scaled),
     ('model', RandomForestClassifier(
         n_estimators=100,
-        random_state=RANDOM_STATE
-    ))
-])
+        class_weight='balanced',
+        random_state=RANDOM_STATE))])
 
-r_forest.fit(X_train, y_train)
-r_forest_valid = evaluator("Random Forest", r_forest, X_valid, y_valid)
-
+r_forest_pipeline.fit(X_train, y_train)
+r_forest_valid = evaluator("Random Forest", r_forest_pipeline, X_valid, y_valid)
 
 """
 Before leakers droped:
@@ -293,5 +276,65 @@ After leakers droped:
 'f1': 0.8815770823404169, 
 'macro_f1': 0.5747637398511648}
 
+After class_weight is balanced:
+{'model': 'Random Forest', 
+'accuracy': 0.8917354630294329, 
+'precision': 0.8782613295282796, 
+'recall': 0.8917354630294329, 
+'f1': 0.8819580893039005, 
+'macro_f1': 0.5980837256887269}
 
 """
+
+def r_forest_confusion_matrix(model, X_valid, y_valid):
+    preds = model.predict(X_valid)
+    cm = confusion_matrix(y_valid, preds)
+    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=['Denied', 'Approved Not Accepted', 'Originated'])
+    disp.plot(cmap='Blues', values_format='d')
+    plt.title('Random Forest - Validation Set')
+    plt.tight_layout()
+    plt.show()
+
+r_forest_confusion_matrix(model=r_forest_pipeline, X_valid=X_valid, y_valid=y_valid)
+
+
+
+# ==============================Random Forest Classifier END==============================
+
+
+
+
+# ==============================Decision Tree Classifier START==============================
+decision_tree_pipeline = Pipeline(steps=[
+    ('preprocessor', preprocessor_not_scaled),
+    ('model', DecisionTreeClassifier(
+        max_depth=10,
+        class_weight='balanced',
+        random_state=RANDOM_STATE))])
+
+decision_tree_pipeline.fit(X_train, y_train)
+decision_tree_valid = evaluator('Decision Tree', decision_tree_pipeline, X_valid, y_valid)
+"""
+{'model': 'Decision Tree', 
+'accuracy': 0.7627871500358937, 
+'precision': 0.8514605802980469, 
+'recall': 0.7627871500358937, 
+'f1': 0.7995779589536194, 
+'macro_f1': 0.49599219797137645}
+"""
+
+
+def decision_tree_confusion_matrix(model, X_valid, Y_valid):
+    preds = model.predict(X_valid)
+    cm = confusion_matrix(y_valid, preds)
+    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=['Denied', 'Approved Not Accepted', 'Originated'])
+    disp.plot(cmap='Blues', values_format='d')
+    plt.title('Random Forest - Validation Set')
+    plt.tight_layout()
+    plt.show()
+
+
+
+# ==============================Decision Tree Classifier START==============================
+
+
