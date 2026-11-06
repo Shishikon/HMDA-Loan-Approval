@@ -47,7 +47,6 @@ def plot_boxplots_numeric(df):
     ax.set_xticks([0, 1, 2])
     ax.set_xticklabels(['Originated', 'Approved\nNot Accepted', 'Denied'], fontsize=8)
 
-    # Loan Amount — clip at 1 million (realistic mortgage range)
     ax = axes[0][1]
     plot_df = df[df['loan_amount'] <= 1_000_000]
     sns.boxplot(data=plot_df, x=TARGET, y='loan_amount',
@@ -59,7 +58,6 @@ def plot_boxplots_numeric(df):
     ax.set_xticks([0, 1, 2])
     ax.set_xticklabels(['Originated', 'Approved\nNot Accepted', 'Denied'], fontsize=8)
 
-    # Interest Rate — no clipping needed, data is clean
     ax = axes[1][0]
     sns.boxplot(data=df, x=TARGET, y='interest_rate',
                 order=ORDER, hue=TARGET, palette=COLORS,
@@ -70,7 +68,6 @@ def plot_boxplots_numeric(df):
     ax.set_xticks([0, 1, 2])
     ax.set_xticklabels(['Originated', 'Approved\nNot Accepted', 'Denied'], fontsize=8)
 
-    # DTI — bar chart instead of boxplot, only 14 unique values
     ax = axes[1][1]
     dti_counts = df.groupby([TARGET, 'debt_to_income_ratio']).size().reset_index(name='count')
     for outcome, color in zip(ORDER, COLORS):
@@ -129,7 +126,6 @@ def plot_scatter_income_loan(df):
 
 
 def plot_loantype_vs_outcome(df):
-    # calculate percentage of each outcome per loan type
     rate_df = df.groupby(['loan_type', TARGET]).size().reset_index(name='count')
     rate_df['rate'] = rate_df['count'] / rate_df.groupby('loan_type')['count'].transform('sum') * 100
 
@@ -159,7 +155,6 @@ def plot_denial_by_race(df):
     race_df = df.groupby(['derived_race', TARGET]).size().reset_index(name='count')
     race_df['rate'] = race_df['count'] / race_df.groupby('derived_race')['count'].transform('sum') * 100
 
-    # remove races with less than 100 total applications — not reliable
     total_per_race = df['derived_race'].value_counts()
     valid_races = total_per_race[total_per_race >= 100].index
     race_df = race_df[race_df['derived_race'].isin(valid_races)]
@@ -257,7 +252,6 @@ def plot_correlation_heatmap(df):
 
     existing = [c for c in num_features if c in df.columns]
 
-    # clip dirty columns before computing correlation
     temp = df[existing].copy()
     temp['rate_spread'] = temp['rate_spread'].clip(-10, 10)
     temp['property_value'] = temp['property_value'].clip(upper=1_000_000)
