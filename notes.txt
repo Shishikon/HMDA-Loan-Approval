@@ -80,3 +80,17 @@ RandomForestClassifier:
 
 Choosing class_weight=balanced because classes are imbalanced (86% originated)
 and because missing denials has real business cost is a strong justified argument.
+
+
+
+
+
+
+full data (139,301 rows)
+│
+├── trainval 80% (111,440 rows)
+│   │
+│   ├── X_train 80% of trainval (~89,152 rows) ← model learns here
+│   └── X_val   20% of trainval (~22,288 rows) ← we evaluate here
+│
+└── X_test 20% (27,861 rows) ← untouched until very end

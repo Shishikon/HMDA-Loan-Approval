@@ -13,6 +13,8 @@ from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.metrics import classification_report
 import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+from sklearn.tree import DecisionTreeClassifier
+
 from cleaner import one_value, cardinals, leaker, high_missing, transformer, filler_fit, filler_transform
 from EDA import *
 from modules.audit import auditor, summarizer
@@ -246,15 +248,15 @@ def log_confusion_matrix(model, X_valid, y_valid, logger=None):
 
 
 # Random Forest Classifier
-r_forest = Pipeline(steps=[
+r_forest_pipeline = Pipeline(steps=[
     ('preprocessor', preprocessor_not_scaled),
     ('model', RandomForestClassifier(
         n_estimators=100,
         class_weight='balanced',
         random_state=RANDOM_STATE))])
 
-r_forest.fit(X_train, y_train)
-r_forest_valid = evaluator("Random Forest", r_forest, X_valid, y_valid)
+r_forest_pipeline.fit(X_train, y_train)
+r_forest_valid = evaluator("Random Forest", r_forest_pipeline, X_valid, y_valid)
 
 """
 Before leakers droped:
@@ -284,7 +286,7 @@ After class_weight is balanced:
 
 """
 
-def r_random_confusion_matrix(model, X_valid, y_valid, logger=None):
+def r_forest_confusion_matrix(model, X_valid, y_valid):
     preds = model.predict(X_valid)
     cm = confusion_matrix(y_valid, preds)
     disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=['Denied', 'Approved Not Accepted', 'Originated'])
@@ -293,11 +295,46 @@ def r_random_confusion_matrix(model, X_valid, y_valid, logger=None):
     plt.tight_layout()
     plt.show()
 
-# log_confusion_matrix(model=logistic_pipeline, X_valid=X_valid, y_valid=y_valid, logger=logistic_pipeline)
+r_forest_confusion_matrix(model=r_forest_pipeline, X_valid=X_valid, y_valid=y_valid)
 
 
-print(r_forest_valid)
+
 # ==============================Random Forest Classifier END==============================
 
+
+
+
+# ==============================Decision Tree Classifier START==============================
+decision_tree_pipeline = Pipeline(steps=[
+    ('preprocessor', preprocessor_not_scaled),
+    ('model', DecisionTreeClassifier(
+        max_depth=10,
+        class_weight='balanced',
+        random_state=RANDOM_STATE))])
+
+decision_tree_pipeline.fit(X_train, y_train)
+decision_tree_valid = evaluator('Decision Tree', decision_tree_pipeline, X_valid, y_valid)
+"""
+{'model': 'Decision Tree', 
+'accuracy': 0.7627871500358937, 
+'precision': 0.8514605802980469, 
+'recall': 0.7627871500358937, 
+'f1': 0.7995779589536194, 
+'macro_f1': 0.49599219797137645}
+"""
+
+
+def decision_tree_confusion_matrix(model, X_valid, Y_valid):
+    preds = model.predict(X_valid)
+    cm = confusion_matrix(y_valid, preds)
+    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=['Denied', 'Approved Not Accepted', 'Originated'])
+    disp.plot(cmap='Blues', values_format='d')
+    plt.title('Random Forest - Validation Set')
+    plt.tight_layout()
+    plt.show()
+
+
+
+# ==============================Decision Tree Classifier START==============================
 
 
