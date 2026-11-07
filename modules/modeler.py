@@ -8,6 +8,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+from sklearn.tree import DecisionTreeClassifier
 
 from EDA import *
 
@@ -155,9 +156,6 @@ def log_balanced_model(X_train, y_train, X_valid, y_valid):
     return logistic_balanced_valid
 
 
-
-
-
 # Confusion Matrix
 def log_confusion_matrix(model, X_valid, y_valid):
     preds = model.predict(X_valid)
@@ -191,7 +189,7 @@ def r_forest_unbalanced_scaled_model(X_train, y_train, X_valid, y_valid):
         ))
     ])
     r_forest_unbalanced_pipeline.fit(X_train, y_train)
-    r_forest_unbalanced_valid = evaluator("Non-balanced Random Forest",
+    r_forest_unbalanced_valid = evaluator("Unbalanced-Scaled Random Forest",
                                r_forest_unbalanced_pipeline, X_valid, y_valid)
     return r_forest_unbalanced_valid
 
@@ -206,7 +204,7 @@ def r_forest_balanced_scaled_model(X_train, y_train, X_valid, y_valid):
         ))
     ])
     r_forest_balanced_pipeline.fit(X_train, y_train)
-    r_forest_balanced_valid = evaluator("Balanced Random Forest",
+    r_forest_balanced_valid = evaluator("Balanced-Scaled Random Forest",
                                r_forest_balanced_pipeline, X_valid, y_valid)
     return r_forest_balanced_valid
 
@@ -219,7 +217,7 @@ def r_forest_subsample_scaled_model(X_train, y_train, X_valid, y_valid):
             class_weight='balanced_subsample',
             random_state=RANDOM_STATE))])
     r_forest_subsample_pipeline.fit(X_train, y_train)
-    r_forest_subsample_valid = evaluator("Subsample Random Forest",
+    r_forest_subsample_valid = evaluator("Subsample-Scaled Random Forest",
                                          r_forest_subsample_pipeline, X_valid, y_valid)
     return r_forest_subsample_valid
 
@@ -234,7 +232,7 @@ def r_forest_unbalanced_unscaled_model(X_train, y_train, X_valid, y_valid):
         ))
     ])
     r_forest_unbalanced_unscaled_pipeline.fit(X_train, y_train)
-    r_forest_unbalanced_unscaled_valid = evaluator("Non-balanced and Unscaled Random Forest",
+    r_forest_unbalanced_unscaled_valid = evaluator("Unbalanced-Unscaled Random Forest",
                                r_forest_unbalanced_unscaled_pipeline, X_valid, y_valid)
     return r_forest_unbalanced_unscaled_valid
 
@@ -247,7 +245,7 @@ def r_forest_balanced_unscaled_model(X_train, y_train, X_valid, y_valid):
             class_weight='balanced',
             random_state=RANDOM_STATE))])
     r_forest_balanced_scaled_pipeline.fit(X_train, y_train)
-    r_forest_balanced_unscaled_valid = evaluator("Balanced Unscaled Random Forest",
+    r_forest_balanced_unscaled_valid = evaluator("Balanced-Unscaled Random Forest",
                                r_forest_balanced_scaled_pipeline, X_valid, y_valid)
     return r_forest_balanced_unscaled_valid
 
@@ -260,29 +258,12 @@ def r_forest_subsample_unscaled_model(X_train, y_train, X_valid, y_valid):
             class_weight='balanced_subsample',
             random_state=RANDOM_STATE))])
     r_forest_subsample_unscaled_pipeline.fit(X_train, y_train)
-    r_forest_subsample_unscaled_valid = evaluator("Unscaled Subsample Random Forest",
+    r_forest_subsample_unscaled_valid = evaluator("Subsample_balanced-Unscaled Random Forest",
                                          r_forest_subsample_unscaled_pipeline, X_valid, y_valid)
     return r_forest_subsample_unscaled_valid
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 """
+
 def r_forest_confusion_matrix(model, X_valid, y_valid):
     preds = model.predict(X_valid)
     cm = confusion_matrix(y_valid, preds)
@@ -294,7 +275,7 @@ def r_forest_confusion_matrix(model, X_valid, y_valid):
 
 r_forest_confusion_matrix(model=r_forest_pipeline, X_valid=X_valid, y_valid=y_valid)
 
-
+"""
 
 # ==============================Random Forest Classifier END==============================
 
@@ -302,16 +283,29 @@ r_forest_confusion_matrix(model=r_forest_pipeline, X_valid=X_valid, y_valid=y_va
 
 
 # ==============================Decision Tree Classifier START==============================
-decision_tree_pipeline = Pipeline(steps=[
-    ('preprocessor', preprocessor_not_scaled),
-    ('model', DecisionTreeClassifier(
-        max_depth=10,
-        class_weight='balanced',
-        random_state=RANDOM_STATE))])
 
-decision_tree_pipeline.fit(X_train, y_train)
-decision_tree_valid = evaluator('Decision Tree', decision_tree_pipeline, X_valid, y_valid)
+def dec_tree_unbalanced_model(X_train, y_train, X_valid, y_valid):
+    unbalanced_decision_tree_pipeline = Pipeline(steps=[
+        ('preprocessor', preprocessor_not_scaled),
+        ('model', DecisionTreeClassifier(
+            max_depth=10,
+            random_state=RANDOM_STATE))])
 
+    unbalanced_decision_tree_pipeline.fit(X_train, y_train)
+    unbalanced_decision_tree_valid = evaluator('Unbalanced Decision Tree', unbalanced_decision_tree_pipeline, X_valid, y_valid)
+    return unbalanced_decision_tree_valid
+
+def dec_tree_balanced_model(X_train, y_train, X_valid, y_valid):
+    balanced_decision_tree_pipeline = Pipeline(steps=[
+        ('preprocessor', preprocessor_not_scaled),
+        ('model', DecisionTreeClassifier(
+            max_depth=10,
+            class_weight='balanced',
+            random_state=RANDOM_STATE))])
+
+    balanced_decision_tree_pipeline.fit(X_train, y_train)
+    balanced_decision_tree_valid = evaluator('Balanced Decision Tree', balanced_decision_tree_pipeline, X_valid, y_valid)
+    return balanced_decision_tree_valid
 
 
 def decision_tree_confusion_matrix(model, X_valid, Y_valid):
@@ -327,5 +321,3 @@ def decision_tree_confusion_matrix(model, X_valid, Y_valid):
 
 # ==============================Decision Tree Classifier START==============================
 
-
-"""

@@ -198,3 +198,33 @@ After class_weight is balanced:
 
 
 
+
+
+"""
+{'model': 'Unbalanced-Scaled Random Forest', 'accuracy': 0.8993628858578607, 'precision': 0.8845330399506218, 'recall': 0.8993628858578607, 'f1': 0.8808226454479658, 'macro_f1': 0.5725787883984179}
+{'model': 'Balanced-Scaled Random Forest', 'accuracy': 0.8920046661880833, 'precision': 0.8781077167413361, 'recall': 0.8920046661880833, 'f1': 0.88191682480703, 'macro_f1': 0.5955019571163371}
+{'model': 'Subsample-Scaled Random Forest', 'accuracy': 0.8974335965541995, 'precision': 0.8832062913586227, 'recall': 0.8974335965541995, 'f1': 0.8770937185986747, 'macro_f1': 0.5662586954827932}
+{'model': 'Unbalanced-Unscaled Random Forest', 'accuracy': 0.9002153625269204, 'precision': 0.8862592391093689, 'recall': 0.9002153625269204, 'f1': 0.8815770823404169, 'macro_f1': 0.5747637398511648}
+{'model': 'Balanced-Unscaled Random Forest', 'accuracy': 0.8917354630294329, 'precision': 0.8782613295282796, 'recall': 0.8917354630294329, 'f1': 0.8819580893039005, 'macro_f1': 0.5980837256887269}
+{'model': 'Subsample_balanced-Unscaled Random Forest', 'accuracy': 0.8964913854989232, 'precision': 0.8819356519111171, 'recall': 0.8964913854989232, 'f1': 0.8755485819753704, 'macro_f1': 0.5604136498698314}
+
+
+WINNER IS Balanced-Unscaled Random Forest
+"""
+
+
+
+"""
+{'model': 'Unbalanced Decision Tree', 'accuracy': 0.897927135678392, 'precision': 0.8808590544317285, 'recall': 0.897927135678392, 'f1': 0.8808399807914904, 'macro_f1': 0.5722646549156146}
+{'model': 'Balanced Decision Tree', 'accuracy': 0.7627871500358937, 'precision': 0.8514605802980469, 'recall': 0.7627871500358937, 'f1': 0.7995779589536194, 'macro_f1': 0.49599219797137645}
+
+
+Aggressive Over-correcting: The tree alters its split thresholds drastically to try and capture rare cases, which introduces a massive amount of false positives.
+
+Ruining the Tree Structure: Decision trees split data recursively. When weights are forced into the impurity calculations (like Gini or Entropy), it can force the tree to grow in a suboptimal way, destroying its overall predictive power for the majority class without properly stabilizing the minority class.
+
+Severe Accuracy Drop: Because your dataset is heavily imbalanced, the unbalanced tree achieves ~90% accuracy largely by correctly predicting the dominant majority class. When the balanced model tries to force fairness, it misclassifies a huge chunk of the majority class, dragging your overall accuracy and F1 down to 76%.
+
+
+WINNER IS UNBALANCED DECISION TREE
+"""
