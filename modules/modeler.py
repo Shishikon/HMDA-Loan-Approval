@@ -1,45 +1,52 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
 from sklearn.compose import ColumnTransformer
 from sklearn.dummy import DummyClassifier
-from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.impute import SimpleImputer
-from sklearn.metrics import (accuracy_score, precision_score, recall_score, f1_score,
-                             roc_auc_score, confusion_matrix, ConfusionMatrixDisplay)
 from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import (
+    accuracy_score,
+    balanced_accuracy_score,
+    precision_score,
+    recall_score,
+    f1_score,
+    confusion_matrix,
+    ConfusionMatrixDisplay
+)
+from sklearn.metrics import classification_report
+from sklearn.model_selection import GridSearchCV
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
-from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 from sklearn.tree import DecisionTreeClassifier
+from xgboost import XGBClassifier
 
 from EDA import *
 
-
-
-
-
-
-# Modeling
+# Modeling Global Config
 RANDOM_STATE = 42
 
-numeric_cols = ['loan_amount', 'loan_to_value_ratio',
-    'loan_term', 'property_value', 'income', 'debt_to_income_ratio',
-    'tract_population', 'tract_minority_population_percent',
-    'ffiec_msa_md_median_family_income', 'tract_to_msa_income_percentage',
-    'tract_owner_occupied_units', 'tract_one_to_four_family_homes',
-    'tract_median_age_of_housing_units', 'applicant_age_not_applicable',
-    'applicant_age_ord', 'coapplicant_age_not_applicable', 'coapplicant_age_ord',
+numeric_cols = [
+    'loan_amount', 'loan_to_value_ratio', 'loan_term', 'property_value', 
+    'income', 'debt_to_income_ratio', 'tract_population', 
+    'tract_minority_population_percent', 'ffiec_msa_md_median_family_income', 
+    'tract_to_msa_income_percentage', 'tract_owner_occupied_units', 
+    'tract_one_to_four_family_homes', 'tract_median_age_of_housing_units', 
+    'applicant_age_not_applicable', 'applicant_age_ord', 
+    'coapplicant_age_not_applicable', 'coapplicant_age_ord', 
     'is_single_family', 'no_coapplicant'
 ]
 
-
-categorical_cols = ['conforming_loan_limit', 'derived_loan_product_type', 'derived_ethnicity',
+categorical_cols = [
+    'conforming_loan_limit', 'derived_loan_product_type', 'derived_ethnicity',
     'derived_race', 'derived_sex', 'preapproval', 'loan_type', 'lien_status',
     'reverse_mortgage', 'open-end_line_of_credit', 'business_or_commercial_purpose',
-    'negative_amortization', 'interest_only_payment',
-    'balloon_payment', 'other_nonamortizing_features', 'construction_method',
-    'occupancy_type', 'manufactured_home_secured_property_type',
-    'manufactured_home_land_property_interest', 'applicant_credit_score_type',
-    'co-applicant_credit_score_type', 'applicant_ethnicity-1',
-    'co-applicant_ethnicity-1', 'applicant_ethnicity_observed',
+    'negative_amortization', 'interest_only_payment', 'balloon_payment', 
+    'other_nonamortizing_features', 'construction_method', 'occupancy_type', 
+    'manufactured_home_secured_property_type', 'manufactured_home_land_property_interest', 
+    'applicant_credit_score_type', 'co-applicant_credit_score_type', 
+    'applicant_ethnicity-1', 'co-applicant_ethnicity-1', 'applicant_ethnicity_observed',
     'co-applicant_ethnicity_observed', 'applicant_race-1', 'co-applicant_race-1',
     'applicant_race_observed', 'co-applicant_race_observed', 'applicant_sex',
     'co-applicant_sex', 'applicant_sex_observed', 'co-applicant_sex_observed',
@@ -48,34 +55,12 @@ categorical_cols = ['conforming_loan_limit', 'derived_loan_product_type', 'deriv
     'derived_dwelling_category', 'derived_msa-md'
 ]
 
-
-
-
-# action_map = {
-#     'Loan_originated':           2,
-#     'Approved_but_not_accepted': 1,
-#     'Application_denied':        0
-# }
-# copy['action_taken'] = copy['action_taken'].map(action_map)
-
-
-# X = copy.drop(columns=['action_taken'])
-# y = copy['action_taken']
-#
-# X_trainval, X_test, y_trainval, y_test = train_test_split(
-#     X, y, test_size=0.2, random_state=RANDOM_STATE, stratify=y)
-#
-# X_train, X_valid, y_train, y_valid = train_test_split(
-#     X_trainval, y_trainval, test_size=0.2,
-#     random_state=RANDOM_STATE, stratify=y_trainval)
-
-
-
-
+# Pipelines for Data Preprocessing
 numeric_scaled = Pipeline([
     ("imputer", SimpleImputer(strategy="median")),
     ("scaler", StandardScaler())
 ])
+
 numeric_not_scaled = Pipeline([
     ("imputer", SimpleImputer(strategy="median"))
 ])
@@ -89,60 +74,69 @@ preprocessor_scaled = ColumnTransformer(transformers=[
     ('num', numeric_scaled, numeric_cols),
     ('cat', categorical_pipeline, categorical_cols),
 ], remainder='drop')
+
 preprocessor_not_scaled = ColumnTransformer(transformers=[
     ('num', numeric_not_scaled, numeric_cols),
     ('cat', categorical_pipeline, categorical_cols),
 ], remainder='drop')
 
 
-def evaluator(name, model, X_data, y_true):
-    pred = model.predict(X_data)
+# Central Evaluation Function
+from sklearn.metrics import (
+    accuracy_score,
+    balanced_accuracy_score,
+    precision_score,
+    recall_score,
+    f1_score,
+    roc_auc_score,
+    average_precision_score
+)
+
+from sklearn.metrics import confusion_matrix
+
+
+def evaluator(name, model, X_true, y_true):
+    pred = model.predict(X_true)
+
+    probabilities = model.predict_proba(X_true)
+
+    report = classification_report(y_true, pred, zero_division=0)
 
     return {
         "model": name,
         "accuracy": accuracy_score(y_true, pred),
-        "precision": precision_score(y_true, pred,
-            average='weighted',
-            zero_division=0),
-        "recall": recall_score(y_true, pred,
-            average='weighted',
-            zero_division=0),
-        "f1": f1_score(y_true, pred,
-                       average='weighted',
-                       zero_division=0),
-        "macro_f1": f1_score(y_true, pred,
-            average='macro',
-            zero_division=0)}
+        "balanced_accuracy": balanced_accuracy_score(y_true, pred),
+        "precision": precision_score(y_true, pred, average='weighted', zero_division=0),
+        "recall": recall_score(y_true, pred, average='weighted', zero_division=0),
+        "f1": f1_score(y_true, pred, average='weighted', zero_division=0),
+        "macro_f1": f1_score(y_true, pred, average='macro', zero_division=0),
+        "roc_auc": roc_auc_score(y_true, probabilities, multi_class='ovr', average='macro'),
+        "classification_report": report
+    }
 
-
-
-# ==============================Dummy START==============================
+# ============================== Dummy Classifier ==============================
 def baseline_model(X_train, y_train, X_valid, y_valid):
     dummy = Pipeline(steps=[
         ('preprocessor', preprocessor_scaled),
-        ('model', DummyClassifier(strategy="most_frequent"))
-    ])
+        ('model', DummyClassifier(strategy="most_frequent"))])
+
     dummy.fit(X_train, y_train)
-    baseline_valid = evaluator('Dummy Classifier',
-                               dummy, X_valid, y_valid)
-    return baseline_valid
+    baseline = evaluator('Dummy Classifier', dummy, X_valid, y_valid)
+    return baseline
 
-
-# ==============================Dummy END==============================
-
-
-# ==============================Logistic Regression START==============================
-
-def log_model(X_train, y_train, X_valid, y_valid):
+# ============================== Logistic Regression ==============================
+def log_unbalanced_model(X_train, y_train, X_valid, y_valid):
     logistic_pipeline = Pipeline(steps=[
         ('preprocessor', preprocessor_scaled),
         ('model', LogisticRegression(
             max_iter=1000,
+            solver='lbfgs',
             random_state=RANDOM_STATE))])
-    logistic_pipeline.fit(X_train, y_train)
-    logistic_valid = evaluator("Logistic model", logistic_pipeline, X_valid, y_valid)
-    return logistic_valid
 
+    logistic_pipeline.fit(X_train, y_train)
+
+    log_unbalanced_valid = evaluator("Unbalanced Logistic Regression", logistic_pipeline, X_valid, y_valid)
+    return log_unbalanced_valid
 
 def log_balanced_model(X_train, y_train, X_valid, y_valid):
     logistic_pipeline_balanced = Pipeline(steps=[
@@ -151,173 +145,204 @@ def log_balanced_model(X_train, y_train, X_valid, y_valid):
             max_iter=1000,
             class_weight='balanced',
             random_state=RANDOM_STATE))])
+
     logistic_pipeline_balanced.fit(X_train, y_train)
-    logistic_balanced_valid = evaluator("Logistic model Balanced", logistic_pipeline_balanced, X_valid, y_valid)
-    return logistic_balanced_valid
+    log_balanced_valid = evaluator("Balanced Logistic Regression", logistic_pipeline_balanced, X_valid, y_valid)
+    return log_balanced_valid
 
 
-# Confusion Matrix
 def log_confusion_matrix(model, X_valid, y_valid):
     preds = model.predict(X_valid)
     cm = confusion_matrix(y_valid, preds)
-
-    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=['Denied', 'Approved Not Accepted', 'Originated'])
+    disp = ConfusionMatrixDisplay(
+        confusion_matrix=cm, 
+        display_labels=['Denied', 'Approved Not Accepted', 'Originated']
+    )
     disp.plot(cmap='Blues')
     plt.title('Logistic Regression - Validation Set')
     plt.tight_layout()
     plt.show()
 
-# log_confusion_matrix(model=logistic_pipeline, X_valid=X_valid, y_valid=y_valid, logger=logistic_pipeline)
-# log_confusion_matrix(model=logistic_pipeline, X_valid=X_valid, y_valid=y_valid, logger=logistic_pipeline_balanced)
 
-# ==============================Logistic Regression END==============================
-
-
-
-# ==============================Random Forest Classifier START==============================
-
-
-
-
-# Random Forest Classifier
-def r_forest_unbalanced_scaled_model(X_train, y_train, X_valid, y_valid):
-    r_forest_unbalanced_pipeline = Pipeline(steps=[
-        ('preprocessor', preprocessor_scaled),
+# ============================== Random Forest Classifier ==============================
+def r_forest_unbalanced_model(X_train, y_train, X_valid, y_valid):
+    r_forest_pipeline = Pipeline(steps=[
+        ('preprocessor', preprocessor_not_scaled),
         ('model', RandomForestClassifier(
             n_estimators=100,
-            random_state=RANDOM_STATE
-        ))
-    ])
-    r_forest_unbalanced_pipeline.fit(X_train, y_train)
-    r_forest_unbalanced_valid = evaluator("Unbalanced-Scaled Random Forest",
-                               r_forest_unbalanced_pipeline, X_valid, y_valid)
+            n_jobs=-1,
+            random_state=RANDOM_STATE))])
+
+    r_forest_pipeline.fit(X_train, y_train)
+    r_forest_unbalanced_valid =  evaluator("Unbalanced-Unscaled Random Forest",
+                                           r_forest_pipeline, X_valid, y_valid)
     return r_forest_unbalanced_valid
 
 
-def r_forest_balanced_scaled_model(X_train, y_train, X_valid, y_valid):
+def r_forest_balanced_model(X_train, y_train, X_valid, y_valid):
     r_forest_balanced_pipeline = Pipeline(steps=[
-        ('preprocessor', preprocessor_scaled),
+        ('preprocessor', preprocessor_not_scaled),
         ('model', RandomForestClassifier(
             n_estimators=100,
             class_weight='balanced',
-            random_state=RANDOM_STATE
-        ))
-    ])
+            n_jobs=-1,
+            random_state=RANDOM_STATE))])
+
     r_forest_balanced_pipeline.fit(X_train, y_train)
-    r_forest_balanced_valid = evaluator("Balanced-Scaled Random Forest",
-                               r_forest_balanced_pipeline, X_valid, y_valid)
+    r_forest_balanced_valid = evaluator("Balanced-Unscaled Random Forest",
+                                        r_forest_balanced_pipeline, X_valid, y_valid)
     return r_forest_balanced_valid
 
 
-def r_forest_subsample_scaled_model(X_train, y_train, X_valid, y_valid):
+def r_forest_subsample_model(X_train, y_train, X_valid, y_valid):
     r_forest_subsample_pipeline = Pipeline(steps=[
-        ('preprocessor', preprocessor_scaled),
+        ('preprocessor', preprocessor_not_scaled),
         ('model', RandomForestClassifier(
             n_estimators=100,
             class_weight='balanced_subsample',
+            n_jobs=-1,
             random_state=RANDOM_STATE))])
+
     r_forest_subsample_pipeline.fit(X_train, y_train)
-    r_forest_subsample_valid = evaluator("Subsample-Scaled Random Forest",
-                                         r_forest_subsample_pipeline, X_valid, y_valid)
+    r_forest_subsample_valid =  evaluator("Subsample_balanced-Unscaled Random Forest",
+                                          r_forest_subsample_pipeline, X_valid, y_valid)
     return r_forest_subsample_valid
 
 
-
-def r_forest_unbalanced_unscaled_model(X_train, y_train, X_valid, y_valid):
-    r_forest_unbalanced_unscaled_pipeline = Pipeline(steps=[
-        ('preprocessor', preprocessor_not_scaled),
-        ('model', RandomForestClassifier(
-            n_estimators=100,
-            random_state=RANDOM_STATE
-        ))
-    ])
-    r_forest_unbalanced_unscaled_pipeline.fit(X_train, y_train)
-    r_forest_unbalanced_unscaled_valid = evaluator("Unbalanced-Unscaled Random Forest",
-                               r_forest_unbalanced_unscaled_pipeline, X_valid, y_valid)
-    return r_forest_unbalanced_unscaled_valid
-
-
-def r_forest_balanced_unscaled_model(X_train, y_train, X_valid, y_valid):
-    r_forest_balanced_scaled_pipeline = Pipeline(steps=[
-        ('preprocessor', preprocessor_not_scaled),
-        ('model', RandomForestClassifier(
-            n_estimators=100,
-            class_weight='balanced',
-            random_state=RANDOM_STATE))])
-    r_forest_balanced_scaled_pipeline.fit(X_train, y_train)
-    r_forest_balanced_unscaled_valid = evaluator("Balanced-Unscaled Random Forest",
-                               r_forest_balanced_scaled_pipeline, X_valid, y_valid)
-    return r_forest_balanced_unscaled_valid
-
-
-def r_forest_subsample_unscaled_model(X_train, y_train, X_valid, y_valid):
-    r_forest_subsample_unscaled_pipeline = Pipeline(steps=[
-        ('preprocessor', preprocessor_not_scaled),
-        ('model', RandomForestClassifier(
-            n_estimators=100,
-            class_weight='balanced_subsample',
-            random_state=RANDOM_STATE))])
-    r_forest_subsample_unscaled_pipeline.fit(X_train, y_train)
-    r_forest_subsample_unscaled_valid = evaluator("Subsample_balanced-Unscaled Random Forest",
-                                         r_forest_subsample_unscaled_pipeline, X_valid, y_valid)
-    return r_forest_subsample_unscaled_valid
-
-"""
-
-def r_forest_confusion_matrix(model, X_valid, y_valid):
-    preds = model.predict(X_valid)
-    cm = confusion_matrix(y_valid, preds)
-    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=['Denied', 'Approved Not Accepted', 'Originated'])
-    disp.plot(cmap='Blues', values_format='d')
-    plt.title('Random Forest - Validation Set')
-    plt.tight_layout()
-    plt.show()
-
-r_forest_confusion_matrix(model=r_forest_pipeline, X_valid=X_valid, y_valid=y_valid)
-
-"""
-
-# ==============================Random Forest Classifier END==============================
-
-
-
-
-# ==============================Decision Tree Classifier START==============================
-
+# ============================== Decision Tree Classifier ==============================
 def dec_tree_unbalanced_model(X_train, y_train, X_valid, y_valid):
-    unbalanced_decision_tree_pipeline = Pipeline(steps=[
+    dt_pipeline = Pipeline(steps=[
         ('preprocessor', preprocessor_not_scaled),
         ('model', DecisionTreeClassifier(
             max_depth=10,
             random_state=RANDOM_STATE))])
 
-    unbalanced_decision_tree_pipeline.fit(X_train, y_train)
-    unbalanced_decision_tree_valid = evaluator('Unbalanced Decision Tree', unbalanced_decision_tree_pipeline, X_valid, y_valid)
-    return unbalanced_decision_tree_valid
+    dt_pipeline.fit(X_train, y_train)
+    dec_tree_unbalanced_valid =  evaluator('Unbalanced Decision Tree', dt_pipeline, X_valid, y_valid)
+    return dec_tree_unbalanced_valid
+
 
 def dec_tree_balanced_model(X_train, y_train, X_valid, y_valid):
-    balanced_decision_tree_pipeline = Pipeline(steps=[
+    dt_balanced_pipeline = Pipeline(steps=[
         ('preprocessor', preprocessor_not_scaled),
         ('model', DecisionTreeClassifier(
             max_depth=10,
             class_weight='balanced',
             random_state=RANDOM_STATE))])
 
-    balanced_decision_tree_pipeline.fit(X_train, y_train)
-    balanced_decision_tree_valid = evaluator('Balanced Decision Tree', balanced_decision_tree_pipeline, X_valid, y_valid)
-    return balanced_decision_tree_valid
+    dt_balanced_pipeline.fit(X_train, y_train)
+    dec_tree_balanced_valid =  evaluator('Balanced Decision Tree', dt_balanced_pipeline, X_valid, y_valid)
+    return dec_tree_balanced_valid
+
+# ============================== XGBoost Classifier ==============================
+def xgboost_model(X_train, y_train, X_valid, y_valid):
+    xgboost_pipeline = Pipeline(steps=[
+        ('preprocessor', preprocessor_not_scaled),
+        ('model', XGBClassifier(
+            n_estimators=100,
+            learning_rate=0.1,
+            max_depth=5,
+            random_state=RANDOM_STATE,
+            n_jobs=-1))])
+
+    xgboost_pipeline.fit(X_train, y_train)
+    xgboost_valid =  evaluator('XGBoost', xgboost_pipeline, X_valid, y_valid)
+    return xgboost_valid
 
 
-def decision_tree_confusion_matrix(model, X_valid, Y_valid):
-    preds = model.predict(X_valid)
-    cm = confusion_matrix(y_valid, preds)
-    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=['Denied', 'Approved Not Accepted', 'Originated'])
-    disp.plot(cmap='Blues', values_format='d')
-    plt.title('Random Forest - Validation Set')
-    plt.tight_layout()
-    plt.show()
 
 
 
-# ==============================Decision Tree Classifier START==============================
+# Tuning
+
+def tune_log_reg(X_train, y_train):
+    log_reg_pipeline = Pipeline(steps=[
+        ('preprocessor', preprocessor_scaled),
+        ('model', LogisticRegression(
+            max_iter=1000,
+            random_state=RANDOM_STATE,
+            solver='lbfgs'))])
+
+    params = {
+        'model__C': [0.01, 0.1, 1.0, 10.0],
+        'model__class_weight': [None, 'balanced']
+    }
+
+    grid_search = GridSearchCV(
+        estimator=log_reg_pipeline,
+        param_grid=params,
+        cv=3,
+        scoring='f1_macro',
+        n_jobs=-1,
+        verbose=1)
+    grid_search.fit(X_train, y_train)
+    results_df = pd.DataFrame(grid_search.cv_results_)
+
+    return grid_search.best_estimator_, grid_search.best_params_, results_df
+
+def tune_r_forest(X_train, y_train):
+    r_forest_pipeline = Pipeline(steps=[
+        ('preprocessor', preprocessor_not_scaled),
+        ('model', RandomForestClassifier(
+            random_state=RANDOM_STATE,
+            n_jobs=-1))])
+    params = {
+        'model__n_estimators': [100, 200, 300],
+        'model__max_depth': [10, 20, None],
+        'model__class_weight': ['balanced', 'balanced_subsample', None],
+    }
+    grid_search = GridSearchCV(
+        estimator=r_forest_pipeline,
+        param_grid=params,
+        cv=3,
+        scoring='f1_macro',
+        n_jobs=-1,
+        verbose=1)
+    grid_search.fit(X_train, y_train)
+    r_forest_results_df = pd.DataFrame(grid_search.cv_results_)
+    return grid_search.best_estimator_, grid_search.best_params_, r_forest_results_df
+
+
+def tune_xgboost(X_train, y_train):
+    xgboost_pipeline = Pipeline(steps=[
+        ('preprocessor', preprocessor_not_scaled),
+        ('model', XGBClassifier(
+            random_state=RANDOM_STATE,
+            n_jobs=-1))])
+    params = {
+        'model__n_estimators': [100, 200, 300],
+        'model__max_depth': [3, 5, 7],
+        'model_learning_rate': [0.01, 0.1, 0.2],
+    }
+
+    grid_search = GridSearchCV(
+        estimator=xgboost_pipeline,
+        param_grid=params,
+        cv=3,
+        scoring='f1_macro',
+        n_jobs=-1,
+        verbose=1)
+    grid_search.fit(X_train, y_train)
+    xgboost_results_df = pd.DataFrame(grid_search.cv_results_)
+    return grid_search.best_estimator_, grid_search.best_params_, xgboost_results_df
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

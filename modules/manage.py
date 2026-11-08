@@ -1,25 +1,13 @@
-import pandas as pd
-import numpy as np
-from sklearn.compose import ColumnTransformer
-from sklearn.dummy import DummyClassifier
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.impute import SimpleImputer
-from sklearn.metrics import (accuracy_score, precision_score, recall_score, f1_score,
-                             roc_auc_score, confusion_matrix, ConfusionMatrixDisplay)
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
-from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import StandardScaler, OneHotEncoder
-from sklearn.metrics import classification_report
-import matplotlib.pyplot as plt
-from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
-from sklearn.tree import DecisionTreeClassifier
+
 
 from cleaner import one_value, cardinals, leaker, high_missing, transformer, filler_fit, filler_transform
 from EDA import *
 from modules.audit import auditor, summarizer
 from mapper import mapper
-from modules.modeler import baseline_model
+from modules.modeler import tune_log_reg, evaluator, tune_r_forest, tune_xgboost
 
 pd.set_option('display.max_rows', None)
 
@@ -62,71 +50,61 @@ X_train, X_valid, y_train, y_valid = train_test_split(
 
 from modeler import baseline_model
 # _baseline = baseline_model(X_train=X_train, y_train=y_train, X_valid=X_valid, y_valid=y_valid)
-"""
-{'model': 'Dummy Classifier', 
-'accuracy': 0.860956568557071,
-'precision': 0.7412462129415666,
-'recall': 0.860956568557071,
-'f1': 0.7966292448364942, 
-'macro_f1': 0.3084279640925493}
-"""
 
-from modeler import log_model, log_balanced_model
 
-# _log = log_model(X_train=X_train, y_train=y_train, X_valid=X_valid, y_valid=y_valid)
+from modeler import log_unbalanced_model, log_balanced_model
 
+# _log_unbalanced = log_unbalanced_model(X_train=X_train, y_train=y_train, X_valid=X_valid, y_valid=y_valid)
 # _log_balanced = log_balanced_model(X_train=X_train, y_train=y_train,X_valid=X_valid, y_valid=y_valid)
 
 
 
-from modeler import (r_forest_unbalanced_scaled_model,
-                     r_forest_balanced_scaled_model,
-                     r_forest_subsample_scaled_model,
-                     r_forest_unbalanced_unscaled_model,
-                     r_forest_balanced_unscaled_model,
-                     r_forest_subsample_unscaled_model)
+from modeler import (r_forest_unbalanced_model, r_forest_balanced_model, r_forest_subsample_model)
 
-# _r_forest_unbalanced_scaled_model = (
-#     r_forest_unbalanced_scaled_model(X_train=X_train, y_train=y_train,
-#                                      X_valid=X_valid, y_valid=y_valid))
+# _r_forest_unbalanced_model = (
+#     r_forest_unbalanced_model(X_train=X_train, y_train=y_train, X_valid=X_valid, y_valid=y_valid))
 
-# _r_forest_balanced_scaled_model = (
-#     r_forest_balanced_scaled_model(X_train=X_train, y_train=y_train,
-#                                    X_valid=X_valid, y_valid=y_valid))
+# _r_forest_balanced_model = (
+#     r_forest_balanced_model(X_train=X_train, y_train=y_train, X_valid=X_valid, y_valid=y_valid))
 
-
-# _r_forest_subsample_scaled_model = (
-#     r_forest_subsample_scaled_model(X_train=X_train, y_train=y_train,
-#                                     X_valid=X_valid, y_valid=y_valid))
-
-
-# _r_forest_unbalanced_unscaled_model = (
-#     r_forest_unbalanced_unscaled_model(X_train=X_train, y_train=y_train,
-#                                        X_valid=X_valid, y_valid=y_valid))
-
-
-# _r_forest_balanced_unscaled_model = (
-#     r_forest_balanced_unscaled_model(X_train=X_train, y_train=y_train,
-#                                      X_valid=X_valid, y_valid=y_valid))
-
-
-# _r_forest_subsample_unscaled_model = (
-#     r_forest_subsample_unscaled_model(X_train=X_train, y_train=y_train,
-#                                       X_valid=X_valid, y_valid=y_valid))
-
-
-
+# _r_forest_subsample_model = (
+#     r_forest_subsample_model(X_train=X_train, y_train=y_train, X_valid=X_valid, y_valid=y_valid))
 
 
 from modeler import dec_tree_unbalanced_model, dec_tree_balanced_model
 
+# _dec_tree_unbalanced_model = (
+#     dec_tree_unbalanced_model(X_train=X_train, y_train=y_train, X_valid=X_valid, y_valid=y_valid))
 
-_dec_tree_unbalanced_model = dec_tree_unbalanced_model(X_train=X_train, y_train=y_train,
-                                                       X_valid=X_valid, y_valid=y_valid)
-print(_dec_tree_unbalanced_model)
+# _dec_tree_balanced_model = (
+#     dec_tree_balanced_model(X_train=X_train, y_train=y_train, X_valid=X_valid, y_valid=y_valid))
 
 
-_dec_tree_balanced_model = dec_tree_balanced_model(X_train=X_train, y_train=y_train,
-                                                       X_valid=X_valid, y_valid=y_valid)
-print(_dec_tree_balanced_model)
 
+from modeler import xgboost_model
+# _xgboost_model = xgboost_model(X_train=X_train, y_train=y_train, X_valid=X_valid, y_valid=y_valid)
+
+
+
+# Tuning
+
+# LogisticRegression
+
+# best_log_model, best_log_params, all_log_results = tune_log_reg(X_train, y_train)
+# log_reg_summary = all_log_results[['params', 'mean_test_score', 'rank_test_score']].sort_values(by='rank_test_score')
+# log_validator = evaluator("Tuned log reg", best_log_model, X_valid, y_valid)
+
+
+# RandomForestClassifier
+
+# best_r_forest_model, best_r_forest_params, r_forest_results = tune_r_forest(X_train, y_train)
+# r_forest_summary = r_forest_results[['params', 'mean_test_score', 'rank_test_score']].sort_values(by='rank_test_score')
+# r_forest_validator = evaluator("Tuned Random Forest", best_r_forest_model, X_valid, y_valid)
+
+
+# XGBoostClassifier
+
+best_xgboost_model, best_xgboost_params, xgboost_results = tune_xgboost(X_train, y_train)
+xgboost_summary = xgboost_results[['params', 'mean_test_score', 'rank_test_score']].sort_values(by='rank_test_score')
+xgboost_validator = evaluator('Tuned XGBoost Classifier',
+                              best_xgboost_model, X_valid, y_valid)

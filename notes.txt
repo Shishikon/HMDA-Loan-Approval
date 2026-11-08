@@ -1,6 +1,6 @@
 TO-DO:
 1. Create confusion matrix for each model
-2. Continue with RandomForest Classifier
+
 
 
 
