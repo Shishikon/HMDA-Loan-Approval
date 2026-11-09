@@ -8,7 +8,8 @@ from cleaner import one_value, cardinals, leaker, high_missing, transformer, fil
 from EDA import *
 from modules.audit import auditor, summarizer
 from mapper import mapper
-from modules.modeler import tune_log_reg, evaluator, tune_r_forest, tune_xgboost
+from modules.modeler import (tune_log_reg, evaluator, tune_dec_tree,
+                             tune_r_forest, tune_xgboost, plot_confusion_matrix)
 
 pd.set_option('display.max_rows', None)
 
@@ -89,61 +90,36 @@ from modeler import xgboost_model
 
 # Tuning
 
+
 # LogisticRegression
 
-best_log_model, best_log_params, all_log_results = tune_log_reg(X_train, y_train)
-# log_reg_summary = all_log_results[['params', 'mean_test_score', 'rank_test_score']].sort_values(by='rank_test_score')
+# best_log_model, best_log_params, log_reg_results = tune_log_reg(X_train, y_train)
+# log_reg_summary = log_reg_results[['params', 'mean_test_score', 'rank_test_score']].sort_values(by='rank_test_score')
 # log_validator = evaluator("Tuned log reg", best_log_model, X_valid, y_valid)
-print(best_log_params)
+# conf_mat_log_reg = plot_confusion_matrix(best_log_model, X_valid, y_valid, 'Logistic Regression')
+
+# DecisionTreeClassifier
+
+# best_dtree_model, best_dtree_params, dtree_results = tune_dec_tree(X_train, y_train)
+# dtree_summary = dtree_results[['params', 'mean_test_score', 'rank_test_score']].sort_values(by='rank_test_score')
+# dtree_validator = evaluator("Tuned Decision Tree Classifier", best_dtree_model, X_valid, y_valid)
+# conf_mat_dtree = plot_confusion_matrix(best_dtree_model, X_valid, y_valid, 'Decision Tree Classifier')
+
 
 # RandomForestClassifier
 
 # best_r_forest_model, best_r_forest_params, r_forest_results = tune_r_forest(X_train, y_train)
 # r_forest_summary = r_forest_results[['params', 'mean_test_score', 'rank_test_score']].sort_values(by='rank_test_score')
-# r_forest_validator = evaluator("Tuned Random Forest", best_r_forest_model, X_valid, y_valid)
+# r_forest_validator = evaluator("Tuned Random Forest Classifier", best_r_forest_model, X_valid, y_valid)
+# conf_mat_r_forest = plot_confusion_matrix(best_r_forest_model, X_valid, y_valid, 'Random Forest Classifier')
 
 
 # XGBoostClassifier
 
 # best_xgboost_model, best_xgboost_params, xgboost_results = tune_xgboost(X_train, y_train)
 # xgboost_summary = xgboost_results[['params', 'mean_test_score', 'rank_test_score']].sort_values(by='rank_test_score')
-# xgboost_validator = evaluator('Tuned XGBoost Classifier',
-#                               best_xgboost_model, X_valid, y_valid)
+# xgboost_validator = evaluator('Tuned XGBoost Classifier', best_xgboost_model, X_valid, y_valid)
+# conf_mat_xgboost = plot_confusion_matrix(best_xgboost_model, X_valid, y_valid, 'XGBoost Classifier')
 
 
 
-
-
-
-
-
-
-
-
-
-"""
-
-
- n_estimators=300, learning_rate=0.1, max_depth=5,
-    precision    recall  f1-score   support 
-          0       0.81      0.46      0.59      2422
-          1       0.60      0.19      0.29       677
-          2       0.92      0.99      0.95     19189
-    accuracy                          0.91     22288
-    macro avg      0.77      0.55      0.61     22288
-weighted avg       0.89      0.91      0.89     22288
-
-
-
- n_estimators=300, learning_rate=0.2, max_depth=7,
-                precision    recall  f1-score   support
-           0       0.81      0.49      0.61      2422
-           1       0.57      0.20      0.29       677
-           2       0.92      0.99      0.95     19189
-    accuracy                           0.91     22288
-   macro avg       0.76      0.56      0.62     22288
-weighted avg       0.90      0.91      0.89     22288
-
-
-
-"""

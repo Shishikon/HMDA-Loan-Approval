@@ -1,29 +1,31 @@
-import numpy as np
-import matplotlib.pyplot as plt
 import pandas as pd
+import seaborn as sns
+from matplotlib import pyplot as plt
 
-from sklearn.compose import ColumnTransformer
-from sklearn.dummy import DummyClassifier
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.impute import SimpleImputer
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import (
-    accuracy_score,
-    balanced_accuracy_score,
-    precision_score,
-    recall_score,
-    f1_score,
-    confusion_matrix,
-    ConfusionMatrixDisplay
-)
-from sklearn.metrics import classification_report
-from sklearn.model_selection import GridSearchCV
+
 from sklearn.pipeline import Pipeline
+from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.compose import ColumnTransformer
+
+
+from sklearn.dummy import DummyClassifier
+
+from sklearn.linear_model import LogisticRegression
 from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier
 from xgboost import XGBClassifier
 
-from EDA import *
+
+from sklearn.model_selection import GridSearchCV
+
+from sklearn.metrics import (accuracy_score, balanced_accuracy_score,
+                             precision_score, recall_score, f1_score,
+                             confusion_matrix, ConfusionMatrixDisplay,
+                             roc_auc_score, classification_report)
+
+
+
 
 # Modeling Global Config
 RANDOM_STATE = 42
@@ -59,52 +61,25 @@ categorical_cols = [
 # Pipelines for Data Preprocessing
 numeric_scaled = Pipeline([
     ("imputer", SimpleImputer(strategy="median")),
-    ("scaler", StandardScaler())
-])
+    ("scaler", StandardScaler())])
 
 numeric_not_scaled = Pipeline([
-    ("imputer", SimpleImputer(strategy="median"))
-])
+    ("imputer", SimpleImputer(strategy="median"))])
 
 categorical_pipeline = Pipeline([
     ("imputer", SimpleImputer(strategy="most_frequent")),
-    ("encoder", OneHotEncoder(handle_unknown="ignore", sparse_output=False))
-])
+    ("encoder", OneHotEncoder(handle_unknown="ignore", sparse_output=False))])
 
 preprocessor_scaled = ColumnTransformer(transformers=[
     ('num', numeric_scaled, numeric_cols),
-    ('cat', categorical_pipeline, categorical_cols),
-], remainder='drop')
+    ('cat', categorical_pipeline, categorical_cols)], remainder='drop')
 
 preprocessor_not_scaled = ColumnTransformer(transformers=[
     ('num', numeric_not_scaled, numeric_cols),
-    ('cat', categorical_pipeline, categorical_cols),
-], remainder='drop')
+    ('cat', categorical_pipeline, categorical_cols),], remainder='drop')
 
 
 # Central Evaluation Function
-from sklearn.metrics import (
-    accuracy_score,
-    balanced_accuracy_score,
-    precision_score,
-    recall_score,
-    f1_score,
-    roc_auc_score,
-    average_precision_score
-)
-
-from sklearn.metrics import confusion_matrix
-
-import matplotlib.pyplot as plt
-import seaborn as sns
-import pandas as pd
-from sklearn.metrics import (
-    accuracy_score, balanced_accuracy_score, precision_score,
-    recall_score, f1_score, roc_auc_score, classification_report,
-    confusion_matrix
-)
-
-
 def evaluator(name, model, X_true, y_true):
     pred = model.predict(X_true)
     probabilities = model.predict_proba(X_true)
@@ -123,7 +98,6 @@ def evaluator(name, model, X_true, y_true):
     fig, axes = plt.subplots(1, 2, figsize=(14, 6), gridspec_kw={'width_ratios': [1, 1.2]})
     fig.suptitle(f'Model Evaluation Report: {name}', fontsize=16, fontweight='bold', y=0.98)
 
-    # 1. Left Subplot: Metrics Summary Card / Bar Chart
     metrics_dict = {
         'Accuracy': acc,
         'Balanced Acc': bal_acc,
@@ -164,30 +138,10 @@ def evaluator(name, model, X_true, y_true):
         "f1": f1,
         "macro_f1": macro_f1,
         "roc_auc": roc_auc,
-        "classification_report": report_str
-    }
+        "classification_report": report_str}
 
-
-
-# def evaluator(name, model, X_true, y_true):
-#     pred = model.predict(X_true)
-#     probabilities = model.predict_proba(X_true)
-#     report = classification_report(y_true, pred, zero_division=0)
-#
-#     return {
-#         "model": name,
-#         "accuracy": accuracy_score(y_true, pred),
-#         "balanced_accuracy": balanced_accuracy_score(y_true, pred),
-#         "precision": precision_score(y_true, pred, average='weighted', zero_division=0),
-#         "recall": recall_score(y_true, pred, average='weighted', zero_division=0),
-#         "f1": f1_score(y_true, pred, average='weighted', zero_division=0),
-#         "macro_f1": f1_score(y_true, pred, average='macro', zero_division=0),
-#         "roc_auc": roc_auc_score(y_true, probabilities, multi_class='ovr', average='macro'),
-#         "classification_report": report
-#     }
 
 # ============================== Dummy Classifier ==============================
-
 
 def baseline_model(X_train, y_train, X_valid, y_valid):
     dummy = Pipeline(steps=[
@@ -212,6 +166,7 @@ def log_unbalanced_model(X_train, y_train, X_valid, y_valid):
     log_unbalanced_valid = evaluator("Unbalanced Logistic Regression", logistic_pipeline, X_valid, y_valid)
     return log_unbalanced_valid
 
+
 def log_balanced_model(X_train, y_train, X_valid, y_valid):
     logistic_pipeline_balanced = Pipeline(steps=[
         ('preprocessor', preprocessor_scaled),
@@ -225,17 +180,30 @@ def log_balanced_model(X_train, y_train, X_valid, y_valid):
     return log_balanced_valid
 
 
-def log_confusion_matrix(model, X_valid, y_valid):
-    preds = model.predict(X_valid)
-    cm = confusion_matrix(y_valid, preds)
-    disp = ConfusionMatrixDisplay(
-        confusion_matrix=cm, 
-        display_labels=['Denied', 'Approved Not Accepted', 'Originated']
-    )
-    disp.plot(cmap='Blues')
-    plt.title('Logistic Regression - Validation Set')
-    plt.tight_layout()
-    plt.show()
+# ============================== Decision Tree Classifier ==============================
+def dec_tree_unbalanced_model(X_train, y_train, X_valid, y_valid):
+    dt_pipeline = Pipeline(steps=[
+        ('preprocessor', preprocessor_not_scaled),
+        ('model', DecisionTreeClassifier(
+            max_depth=10,
+            random_state=RANDOM_STATE))])
+
+    dt_pipeline.fit(X_train, y_train)
+    dec_tree_unbalanced_valid =  evaluator('Unbalanced Decision Tree', dt_pipeline, X_valid, y_valid)
+    return dec_tree_unbalanced_valid
+
+
+def dec_tree_balanced_model(X_train, y_train, X_valid, y_valid):
+    dt_balanced_pipeline = Pipeline(steps=[
+        ('preprocessor', preprocessor_not_scaled),
+        ('model', DecisionTreeClassifier(
+            max_depth=10,
+            class_weight='balanced',
+            random_state=RANDOM_STATE))])
+
+    dt_balanced_pipeline.fit(X_train, y_train)
+    dec_tree_balanced_valid =  evaluator('Balanced Decision Tree', dt_balanced_pipeline, X_valid, y_valid)
+    return dec_tree_balanced_valid
 
 
 # ============================== Random Forest Classifier ==============================
@@ -283,31 +251,6 @@ def r_forest_subsample_model(X_train, y_train, X_valid, y_valid):
     return r_forest_subsample_valid
 
 
-# ============================== Decision Tree Classifier ==============================
-def dec_tree_unbalanced_model(X_train, y_train, X_valid, y_valid):
-    dt_pipeline = Pipeline(steps=[
-        ('preprocessor', preprocessor_not_scaled),
-        ('model', DecisionTreeClassifier(
-            max_depth=10,
-            random_state=RANDOM_STATE))])
-
-    dt_pipeline.fit(X_train, y_train)
-    dec_tree_unbalanced_valid =  evaluator('Unbalanced Decision Tree', dt_pipeline, X_valid, y_valid)
-    return dec_tree_unbalanced_valid
-
-
-def dec_tree_balanced_model(X_train, y_train, X_valid, y_valid):
-    dt_balanced_pipeline = Pipeline(steps=[
-        ('preprocessor', preprocessor_not_scaled),
-        ('model', DecisionTreeClassifier(
-            max_depth=10,
-            class_weight='balanced',
-            random_state=RANDOM_STATE))])
-
-    dt_balanced_pipeline.fit(X_train, y_train)
-    dec_tree_balanced_valid =  evaluator('Balanced Decision Tree', dt_balanced_pipeline, X_valid, y_valid)
-    return dec_tree_balanced_valid
-
 # ============================== XGBoost Classifier ==============================
 def xgboost_model(X_train, y_train, X_valid, y_valid):
     xgboost_pipeline = Pipeline(steps=[
@@ -336,13 +279,19 @@ def tune_log_reg(X_train, y_train):
             solver='lbfgs'))])
 
     params = {
-        'model__C': [0.01, 0.1, 1.0, 10.0],
-        'model__class_weight': [None, 'balanced']
+        'model__C': [0.001, 0.01, 0.1, 1, 10, 100],
+        'model__class_weight': [None, 'balanced'],
+        'model__solver': ['lbfgs'],
+        'model__max_iter': [2000]
     }
+
+    best_params_conf_matrix = {
+        'model__C': [0.01],
+        'model__class_weight': ['balanced']}
 
     grid_search = GridSearchCV(
         estimator=log_reg_pipeline,
-        param_grid=params,
+        param_grid=best_params_conf_matrix,
         cv=3,
         scoring='f1_macro',
         n_jobs=-1,
@@ -352,20 +301,76 @@ def tune_log_reg(X_train, y_train):
 
     return grid_search.best_estimator_, grid_search.best_params_, results_df
 
+
+def tune_dec_tree(X_train, y_train):
+    dec_tree_pipeline = Pipeline(steps=[
+        ('preprocessor', preprocessor_not_scaled),
+        ('model', DecisionTreeClassifier(
+            random_state=RANDOM_STATE))])
+
+    params = {
+        'model__max_depth': [5, 10, 15, 20, None],
+        'model__class_weight': ['balanced'],
+        'model__max_features': [None, 'sqrt', 0.5],
+        'model__min_samples_split': [2, 5, 10],
+        'model__min_samples_leaf': [1, 3, 5, 10],
+        'model__criterion': ['gini', 'entropy']
+    }
+
+    best_params_conf_matrix = {
+        'model__max_depth': [10],
+        'model__class_weight': ['balanced'],
+        'model__max_features': [0.5],
+        'model__min_samples_split': [5],
+        'model__min_samples_leaf': [3],
+        'model__criterion': ['gini']
+    }
+
+    grid_search = GridSearchCV(
+        estimator=dec_tree_pipeline,
+        param_grid=best_params_conf_matrix,
+        cv=3,
+        scoring='f1_macro',
+        n_jobs=-1,
+        verbose=1)
+
+    grid_search.fit(X_train, y_train)
+    dt_results_df = pd.DataFrame(grid_search.cv_results_)
+
+    return grid_search.best_estimator_, grid_search.best_params_, dt_results_df
+
+
 def tune_r_forest(X_train, y_train):
+    # from imblearn.over_sampling import SMOTE
+    # from imblearn.pipeline import Pipeline
+
     r_forest_pipeline = Pipeline(steps=[
         ('preprocessor', preprocessor_not_scaled),
+        # ('smote', SMOTE(random_state=RANDOM_STATE)),
         ('model', RandomForestClassifier(
             random_state=RANDOM_STATE,
             n_jobs=-1))])
+
     params = {
-        'model__n_estimators': [100, 200, 300],
-        'model__max_depth': [10, 20, None],
-        'model__class_weight': ['balanced', 'balanced_subsample', None],
+        'model__n_estimators': [300, 500, 700],
+        'model__max_depth': [10, 15, 20, None],
+        'model__class_weight': ['balanced', 'balanced_subsample'],
+        'model__max_features': ['sqrt', 0.5, None],
+        'model__min_samples_leaf': [1, 3, 5, 10],
+        'model__min_samples_split': [2, 5, 10]
     }
+
+    best_params_conf_matrix = {
+        'model__n_estimators': [300],
+        'model__max_depth': [10, 15],
+        'model__class_weight': ['balanced'],
+        'model__max_features': ['sqrt', 0.5],
+        'model__min_samples_leaf': [1, 3]
+    }
+
     grid_search = GridSearchCV(
         estimator=r_forest_pipeline,
-        param_grid=params,
+        param_grid=best_params_conf_matrix,
         cv=3,
         scoring='f1_macro',
         n_jobs=-1,
@@ -381,6 +386,7 @@ def tune_xgboost(X_train, y_train):
         ('model', XGBClassifier(
             random_state=RANDOM_STATE,
             n_jobs=-1))])
+
     params = {
         'model__n_estimators': [100, 200, 300],
         'model__max_depth': [3, 5, 7],
@@ -388,10 +394,17 @@ def tune_xgboost(X_train, y_train):
         'model__subsample': [0.8, 1.0],
         'model__colsample_bytree': [0.8, 1.0]
     }
+    best_params_conf_matrix = {
+        'model__n_estimators': [300],
+        'model__max_depth': [5],
+        'model__learning_rate': [0.01],
+        'model__subsample': [0.8, 1.0],
+        'model__colsample_bytree': [0.8, 1.0]
+    }
 
     grid_search = GridSearchCV(
         estimator=xgboost_pipeline,
-        param_grid=params,
+        param_grid=best_params_conf_matrix,
         cv=3,
         scoring={'f1_macro': 'f1_macro', 'accuracy': 'accuracy'},
         refit = 'f1_macro',
@@ -402,11 +415,32 @@ def tune_xgboost(X_train, y_train):
     return grid_search.best_estimator_, grid_search.best_params_, xgboost_results_df
 
 
+# Confusion Matrix
+def plot_confusion_matrix(model, X_valid, y_valid, model_name):
+    y_pred = model.predict(X_valid)
+    cm = confusion_matrix(
+        y_valid,
+        y_pred,
+        labels=[0, 1, 2])
 
+    fig, ax = plt.subplots(figsize=(8, 6))
+    disp = ConfusionMatrixDisplay(
+        confusion_matrix=cm,
+        display_labels=[0, 1, 2])
 
+    disp.plot(
+        cmap='Blues',
+        values_format='d',
+        ax=ax,
+        colorbar=True
+    )
 
+    ax.set_title(f'Confusion Matrix - {model_name}',
+        fontsize=14, pad=15)
+    fig.tight_layout()
+    plt.show()
 
-
+    return cm
 
 
 

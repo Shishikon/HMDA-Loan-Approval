@@ -1,71 +1,15 @@
 TO-DO:
-1. Create confusion matrix for each model
+1. ADD CATBOOST AND SVM
+2. TEST ALL TUNERS FOR CONFUSION MATRIX!
 
 
 
 
 Roadmap to Finish the Project
 
-Step 1 — Fix bugs first (occupancy_type, order of pipeline, debt_to_income handling)
-
-Step 2 — Train/test split (do this before any imputation, 80/20 or 70/30 stratified on action_taken)
-
-Step 3 — EDA (on training set only, produce the charts above)
-
-Step 4 — Encoding (you have many string columns after mapping — use LabelEncoder or OrdinalEncoder for tree models, OneHotEncoder for logistic regression; fit on train only)
-
-Step 5 — Baseline model (your rubric says “start with a meaningful baseline” — use a DummyClassifier with strategy='most_frequent' and report its accuracy, then beat it)
-
-Step 6 — Candidate models (given your 3-class target and mix of numeric/categorical: Logistic Regression as interpretable baseline, then Random Forest or XGBoost as main models — both handle this data type well and are justifiable)
-
-Step 7 — Evaluation (use classification_report for precision/recall/F1 per class; use accuracy but also weighted F1 since classes may be imbalanced; show confusion matrix)
-
 Step 8 — Hyperparameter tuning (GridSearchCV or RandomizedSearchCV with cross-validation on train set only)
 
 Step 9 — Final evaluation on test set (run once, report final numbers — don’t tune after seeing test results)
-
-
-1. Logistic Regression
-
-- Preprocessing: scaled.
-- Purpose: establish your first actual predictive model.
-- Helps understand how features influence classification probabilities.
-
-
-2. Decision Tree Classifier
-- Preprocessing: unscaled.
-- Purpose: understand rule-based classification.
-- Can capture nonlinear relationships.
-- Easy to visualize and interpret.
-
-
-3. Random Forest
-- Preprocessing: unscaled.
-- Purpose: combine multiple decision trees.
-- Usually a strong starting point for tabular datasets
-
-
-4. HistGradientBoostingClassifier
-- Preprocessing: numerical imputation and categorical encoding.
-- Purpose: learn complex patterns through sequential boosting.
-- Useful for comparing different ensemble approaches.
-
-
-
-5. Support Vector Machine (SVM)
-- Preprocessing: scaled.
-- Purpose: investigate classification boundaries.
-- Can be computationally expensive on large datasets.
-
-
-
-6. XGBoost or CatBoost
-- Purpose: compare a specialized boosting algorithm.
-- Often competitive on structured tabular data.
-- CatBoost is particularly interesting when dealing with categorical features.
-
-
-
 
 
 
@@ -79,6 +23,16 @@ whereas tree-based models like Random Forest or XGBoost can slice the feature sp
 into rules to catch minority patterns much better.
 
 
+The Limitation of Linear Models: Logistic Regression relies on a linear decision boundary.
+When dealing with severe class imbalance on complex data, forcing a linear model to balance
+classes results in an unacceptable surge of false positives (low precision).
+
+Precision-Recall Trade-off: You can clearly demonstrate that while balancing weights improves
+recall (catching the minority class), it severely damages precision for a linear classifier.
+
+Why Non-Linear Models Are Better Here: This justifies why you are also building Random Forests and XGBoost.
+Tree-based models don't draw single straight lines; they create branching, non-linear rules that can isolate
+ minority classes much more cleanly without generating a massive wave of false positives.
 
 
 
@@ -87,7 +41,6 @@ After the first randomforest model i have found some data leakers:
 'interest_rate', 'rate_spread', 'total_loan_costs', 'origination_charges'
 
 'hoepa_status', ]and they are to be droped.
-
 
 
 
@@ -115,119 +68,8 @@ full data (139,301 rows)
 
 
 
-"""
-{'model': 'Dummy baseline',
-'accuracy': 0.860956568557071,
-'precision': 0.7412462129415666,
-'recall': 0.860956568557071,
-'f1': 0.7966292448364942},
-'macro_f1': 0.3084279640925493
-"""
 
-
-"""
-Before leakers dropped:
-
-{'model': 'Logistic model',
-'accuracy': 0.9551776740847092,
-'precision': 0.9544206818326683,
-'recall': 0.9551776740847092,
-'f1': 0.9497421884803898,
-'macro_f1': 0.7341193255858962}
-
-After leakers dropped:
-
-{'model': 'Logistic model',
-'accuracy': 0.8898061737257718,
-'precision': 0.869006518127738,
-'recall': 0.8898061737257718,
-'f1': 0.8640432138868192,
-'macro_f1': 0.4932932257230885}
-"""
-
-"""
-Before leakers dropped:
-
-{'model': 'Logistic model Balanced',
-'accuracy': 0.8979720028715004,
-'precision': 0.9428364493038996,
-'recall': 0.8979720028715004,
-'f1': 0.91631674805584,
-'macro_f1': 0.6650087487152049}
-
-
-After leakers dropped:
-
-{'model': 'Logistic model Balanced',
-'accuracy': 0.6996141421392678,
-'precision': 0.8391852979152764,
-'recall': 0.6996141421392678,
-'f1': 0.7535906109649437,
-'macro_f1': 0.4418807012886437}
-"""
-
-
-"""
-Before leakers dropped:
-
-{'model': 'Random Forest',
-'accuracy': 0.9899497487437185,
-'precision': 0.9898800527729477,
-'recall': 0.9899497487437185,
-'f1': 0.9895653430341331,
-'macro_f1': 0.9447280301513942}
-
-After leakers dropped:
-{'model': 'Random Forest',
-'accuracy': 0.9002153625269204,
-'precision': 0.8862592391093689,
-'recall': 0.9002153625269204,
-'f1': 0.8815770823404169,
-'macro_f1': 0.5747637398511648}
-
-After class_weight is balanced:
-{'model': 'Random Forest',
-'accuracy': 0.8917354630294329,
-'precision': 0.8782613295282796,
-'recall': 0.8917354630294329,
-'f1': 0.8819580893039005,
-'macro_f1': 0.5980837256887269}
-"""
-
-
-"""
-{'model': 'Decision Tree',
-'accuracy': 0.7627871500358937,
-'precision': 0.8514605802980469,
-'recall': 0.7627871500358937,
-'f1': 0.7995779589536194,
-'macro_f1': 0.49599219797137645}
-"""
-
-
-
-
-
-
-
-"""
-{'model': 'Unbalanced-Scaled Random Forest', 'accuracy': 0.8993628858578607, 'precision': 0.8845330399506218, 'recall': 0.8993628858578607, 'f1': 0.8808226454479658, 'macro_f1': 0.5725787883984179}
-{'model': 'Balanced-Scaled Random Forest', 'accuracy': 0.8920046661880833, 'precision': 0.8781077167413361, 'recall': 0.8920046661880833, 'f1': 0.88191682480703, 'macro_f1': 0.5955019571163371}
-{'model': 'Subsample-Scaled Random Forest', 'accuracy': 0.8974335965541995, 'precision': 0.8832062913586227, 'recall': 0.8974335965541995, 'f1': 0.8770937185986747, 'macro_f1': 0.5662586954827932}
-{'model': 'Unbalanced-Unscaled Random Forest', 'accuracy': 0.9002153625269204, 'precision': 0.8862592391093689, 'recall': 0.9002153625269204, 'f1': 0.8815770823404169, 'macro_f1': 0.5747637398511648}
-{'model': 'Balanced-Unscaled Random Forest', 'accuracy': 0.8917354630294329, 'precision': 0.8782613295282796, 'recall': 0.8917354630294329, 'f1': 0.8819580893039005, 'macro_f1': 0.5980837256887269}
-{'model': 'Subsample_balanced-Unscaled Random Forest', 'accuracy': 0.8964913854989232, 'precision': 0.8819356519111171, 'recall': 0.8964913854989232, 'f1': 0.8755485819753704, 'macro_f1': 0.5604136498698314}
-
-
-WINNER IS Balanced-Unscaled Random Forest
-"""
-
-
-
-"""
-{'model': 'Unbalanced Decision Tree', 'accuracy': 0.897927135678392, 'precision': 0.8808590544317285, 'recall': 0.897927135678392, 'f1': 0.8808399807914904, 'macro_f1': 0.5722646549156146}
-{'model': 'Balanced Decision Tree', 'accuracy': 0.7627871500358937, 'precision': 0.8514605802980469, 'recall': 0.7627871500358937, 'f1': 0.7995779589536194, 'macro_f1': 0.49599219797137645}
-
+Decision Tree:
 
 Aggressive Over-correcting: The tree alters its split thresholds drastically to try and capture rare cases, which introduces a massive amount of false positives.
 
@@ -235,6 +77,3 @@ Ruining the Tree Structure: Decision trees split data recursively. When weights 
 
 Severe Accuracy Drop: Because your dataset is heavily imbalanced, the unbalanced tree achieves ~90% accuracy largely by correctly predicting the dominant majority class. When the balanced model tries to force fairness, it misclassifies a huge chunk of the majority class, dragging your overall accuracy and F1 down to 76%.
 
-
-WINNER IS UNBALANCED DECISION TREE
-"""

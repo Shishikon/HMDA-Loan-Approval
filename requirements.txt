@@ -20,3 +20,4 @@ threadpoolctl==3.7.0
 tzdata==2026.5
 xgboost
 seaborn
+imbalanced-learn
