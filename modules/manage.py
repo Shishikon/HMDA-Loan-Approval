@@ -1,3 +1,4 @@
+from numpy.testing import print_coercion_tables
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
@@ -90,10 +91,10 @@ from modeler import xgboost_model
 
 # LogisticRegression
 
-# best_log_model, best_log_params, all_log_results = tune_log_reg(X_train, y_train)
+best_log_model, best_log_params, all_log_results = tune_log_reg(X_train, y_train)
 # log_reg_summary = all_log_results[['params', 'mean_test_score', 'rank_test_score']].sort_values(by='rank_test_score')
 # log_validator = evaluator("Tuned log reg", best_log_model, X_valid, y_valid)
-
+print(best_log_params)
 
 # RandomForestClassifier
 
@@ -104,7 +105,45 @@ from modeler import xgboost_model
 
 # XGBoostClassifier
 
-best_xgboost_model, best_xgboost_params, xgboost_results = tune_xgboost(X_train, y_train)
-xgboost_summary = xgboost_results[['params', 'mean_test_score', 'rank_test_score']].sort_values(by='rank_test_score')
-xgboost_validator = evaluator('Tuned XGBoost Classifier',
-                              best_xgboost_model, X_valid, y_valid)
+# best_xgboost_model, best_xgboost_params, xgboost_results = tune_xgboost(X_train, y_train)
+# xgboost_summary = xgboost_results[['params', 'mean_test_score', 'rank_test_score']].sort_values(by='rank_test_score')
+# xgboost_validator = evaluator('Tuned XGBoost Classifier',
+#                               best_xgboost_model, X_valid, y_valid)
+
+
+
+
+
+
+
+
+
+
+
+
+"""
+
+
+ n_estimators=300, learning_rate=0.1, max_depth=5,
+    precision    recall  f1-score   support 
+          0       0.81      0.46      0.59      2422
+          1       0.60      0.19      0.29       677
+          2       0.92      0.99      0.95     19189
+    accuracy                          0.91     22288
+    macro avg      0.77      0.55      0.61     22288
+weighted avg       0.89      0.91      0.89     22288
+
+
+
+ n_estimators=300, learning_rate=0.2, max_depth=7,
+                precision    recall  f1-score   support
+           0       0.81      0.49      0.61      2422
+           1       0.57      0.20      0.29       677
+           2       0.92      0.99      0.95     19189
+    accuracy                           0.91     22288
+   macro avg       0.76      0.56      0.62     22288
+weighted avg       0.90      0.91      0.89     22288
+
+
+
+"""

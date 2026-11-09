@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import pandas as pd
 
 from sklearn.compose import ColumnTransformer
 from sklearn.dummy import DummyClassifier
@@ -94,27 +95,100 @@ from sklearn.metrics import (
 
 from sklearn.metrics import confusion_matrix
 
+import matplotlib.pyplot as plt
+import seaborn as sns
+import pandas as pd
+from sklearn.metrics import (
+    accuracy_score, balanced_accuracy_score, precision_score,
+    recall_score, f1_score, roc_auc_score, classification_report,
+    confusion_matrix
+)
+
 
 def evaluator(name, model, X_true, y_true):
     pred = model.predict(X_true)
-
     probabilities = model.predict_proba(X_true)
 
-    report = classification_report(y_true, pred, zero_division=0)
+    # Calculate metrics
+    acc = accuracy_score(y_true, pred)
+    bal_acc = balanced_accuracy_score(y_true, pred)
+    prec = precision_score(y_true, pred, average='weighted', zero_division=0)
+    rec = recall_score(y_true, pred, average='weighted', zero_division=0)
+    f1 = f1_score(y_true, pred, average='weighted', zero_division=0)
+    macro_f1 = f1_score(y_true, pred, average='macro', zero_division=0)
+    roc_auc = roc_auc_score(y_true, probabilities, multi_class='ovr', average='macro')
+
+    report_str = classification_report(y_true, pred, zero_division=0)
+
+    fig, axes = plt.subplots(1, 2, figsize=(14, 6), gridspec_kw={'width_ratios': [1, 1.2]})
+    fig.suptitle(f'Model Evaluation Report: {name}', fontsize=16, fontweight='bold', y=0.98)
+
+    # 1. Left Subplot: Metrics Summary Card / Bar Chart
+    metrics_dict = {
+        'Accuracy': acc,
+        'Balanced Acc': bal_acc,
+        'Weighted F1': f1,
+        'Macro F1': macro_f1,
+        'ROC-AUC (Macro)': roc_auc
+    }
+    metrics_df = pd.DataFrame(list(metrics_dict.items()), columns=['Metric', 'Score'])
+
+    sns.barplot(data=metrics_df, x='Score', y='Metric', hue='Metric', legend=False, ax=axes[0], palette='Blues_r')
+    axes[0].set_xlim(0, 1.0)
+    axes[0].set_title('Core Performance Metrics', fontsize=12, fontweight='bold')
+    axes[0].set_xlabel('Score Value')
+    axes[0].set_ylabel('')
+
+    for p in axes[0].patches:
+        width = p.get_width()
+        axes[0].text(width + 0.02, p.get_y() + p.get_height() / 2, f'{width:.3f}',
+                     va='center', ha='left', fontsize=10, fontweight='bold')
+
+    report_dict = classification_report(y_true, pred, output_dict=True, zero_division=0)
+    report_df = pd.DataFrame(report_dict).iloc[:-1, :-3].T
+
+    sns.heatmap(report_df, annot=True, cmap='Blues', fmt='.2f', cbar=False, ax=axes[1], linewidths=0.5)
+    axes[1].set_title('Class-wise Performance (Precision, Recall, F1)', fontsize=12, fontweight='bold')
+    axes[1].set_xlabel('Metrics')
+    axes[1].set_ylabel('Classes')
+
+    plt.tight_layout()
+    plt.show()
 
     return {
         "model": name,
-        "accuracy": accuracy_score(y_true, pred),
-        "balanced_accuracy": balanced_accuracy_score(y_true, pred),
-        "precision": precision_score(y_true, pred, average='weighted', zero_division=0),
-        "recall": recall_score(y_true, pred, average='weighted', zero_division=0),
-        "f1": f1_score(y_true, pred, average='weighted', zero_division=0),
-        "macro_f1": f1_score(y_true, pred, average='macro', zero_division=0),
-        "roc_auc": roc_auc_score(y_true, probabilities, multi_class='ovr', average='macro'),
-        "classification_report": report
+        "accuracy": acc,
+        "balanced_accuracy": bal_acc,
+        "precision": prec,
+        "recall": rec,
+        "f1": f1,
+        "macro_f1": macro_f1,
+        "roc_auc": roc_auc,
+        "classification_report": report_str
     }
 
+
+
+# def evaluator(name, model, X_true, y_true):
+#     pred = model.predict(X_true)
+#     probabilities = model.predict_proba(X_true)
+#     report = classification_report(y_true, pred, zero_division=0)
+#
+#     return {
+#         "model": name,
+#         "accuracy": accuracy_score(y_true, pred),
+#         "balanced_accuracy": balanced_accuracy_score(y_true, pred),
+#         "precision": precision_score(y_true, pred, average='weighted', zero_division=0),
+#         "recall": recall_score(y_true, pred, average='weighted', zero_division=0),
+#         "f1": f1_score(y_true, pred, average='weighted', zero_division=0),
+#         "macro_f1": f1_score(y_true, pred, average='macro', zero_division=0),
+#         "roc_auc": roc_auc_score(y_true, probabilities, multi_class='ovr', average='macro'),
+#         "classification_report": report
+#     }
+
 # ============================== Dummy Classifier ==============================
+
+
 def baseline_model(X_train, y_train, X_valid, y_valid):
     dummy = Pipeline(steps=[
         ('preprocessor', preprocessor_scaled),
@@ -239,7 +313,7 @@ def xgboost_model(X_train, y_train, X_valid, y_valid):
     xgboost_pipeline = Pipeline(steps=[
         ('preprocessor', preprocessor_not_scaled),
         ('model', XGBClassifier(
-            n_estimators=100,
+            n_estimators=300,
             learning_rate=0.1,
             max_depth=5,
             random_state=RANDOM_STATE,
@@ -248,8 +322,6 @@ def xgboost_model(X_train, y_train, X_valid, y_valid):
     xgboost_pipeline.fit(X_train, y_train)
     xgboost_valid =  evaluator('XGBoost', xgboost_pipeline, X_valid, y_valid)
     return xgboost_valid
-
-
 
 
 
@@ -312,14 +384,17 @@ def tune_xgboost(X_train, y_train):
     params = {
         'model__n_estimators': [100, 200, 300],
         'model__max_depth': [3, 5, 7],
-        'model_learning_rate': [0.01, 0.1, 0.2],
+        'model__learning_rate': [0.01, 0.1, 0.2],
+        'model__subsample': [0.8, 1.0],
+        'model__colsample_bytree': [0.8, 1.0]
     }
 
     grid_search = GridSearchCV(
         estimator=xgboost_pipeline,
         param_grid=params,
         cv=3,
-        scoring='f1_macro',
+        scoring={'f1_macro': 'f1_macro', 'accuracy': 'accuracy'},
+        refit = 'f1_macro',
         n_jobs=-1,
         verbose=1)
     grid_search.fit(X_train, y_train)

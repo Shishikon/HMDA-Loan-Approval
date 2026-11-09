@@ -71,6 +71,16 @@ Step 9 — Final evaluation on test set (run once, report final numbers — don�
 
 Commits:
 
+log reg:
+Logistic Regression is a linear model. If your loan dataset has complex, non-linear
+interactions between features (which is common in financial risk/loan datasets),
+Logistic Regression will hit a hard ceiling on performance for minority classes,
+whereas tree-based models like Random Forest or XGBoost can slice the feature space
+into rules to catch minority patterns much better.
+
+
+
+
 
 After the first randomforest model i have found some data leakers:
 
