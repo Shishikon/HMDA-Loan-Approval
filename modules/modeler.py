@@ -291,7 +291,7 @@ def tune_log_reg(X_train, y_train):
 
     grid_search = GridSearchCV(
         estimator=log_reg_pipeline,
-        param_grid=best_params_conf_matrix,
+        param_grid=params,
         cv=3,
         scoring='f1_macro',
         n_jobs=-1,
@@ -309,11 +309,11 @@ def tune_dec_tree(X_train, y_train):
             random_state=RANDOM_STATE))])
 
     params = {
-        'model__max_depth': [5, 10, 15, 20, None],
+        'model__max_depth': [5, 10, None],
         'model__class_weight': ['balanced'],
         'model__max_features': [None, 'sqrt', 0.5],
         'model__min_samples_split': [2, 5, 10],
-        'model__min_samples_leaf': [1, 3, 5, 10],
+        'model__min_samples_leaf': [1, 3, 5],
         'model__criterion': ['gini', 'entropy']
     }
 
@@ -328,7 +328,7 @@ def tune_dec_tree(X_train, y_train):
 
     grid_search = GridSearchCV(
         estimator=dec_tree_pipeline,
-        param_grid=best_params_conf_matrix,
+        param_grid=params,
         cv=3,
         scoring='f1_macro',
         n_jobs=-1,
@@ -352,12 +352,12 @@ def tune_r_forest(X_train, y_train):
             n_jobs=-1))])
 
     params = {
-        'model__n_estimators': [300, 500, 700],
-        'model__max_depth': [10, 15, 20, None],
+        'model__n_estimators': [200, 500],
+        'model__max_depth': [10, 20, None],
         'model__class_weight': ['balanced', 'balanced_subsample'],
-        'model__max_features': ['sqrt', 0.5, None],
-        'model__min_samples_leaf': [1, 3, 5, 10],
-        'model__min_samples_split': [2, 5, 10]
+        'model__max_features': ['sqrt', 0.5],
+        'model__min_samples_leaf': [1, 4],
+        'model__min_samples_split': [2, 10]
     }
 
     best_params_conf_matrix = {
@@ -370,7 +370,7 @@ def tune_r_forest(X_train, y_train):
 
     grid_search = GridSearchCV(
         estimator=r_forest_pipeline,
-        param_grid=best_params_conf_matrix,
+        param_grid=params,
         cv=3,
         scoring='f1_macro',
         n_jobs=-1,

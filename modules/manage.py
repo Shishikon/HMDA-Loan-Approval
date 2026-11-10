@@ -106,14 +106,14 @@ from modeler import xgboost_model
 # dtree_validator = evaluator("Tuned Decision Tree Classifier", best_dtree_model, X_valid, y_valid)
 # conf_mat_dtree = plot_confusion_matrix(best_dtree_model, X_valid, y_valid, 'Decision Tree Classifier')
 
-
 # RandomForestClassifier
 
-# best_r_forest_model, best_r_forest_params, r_forest_results = tune_r_forest(X_train, y_train)
-# r_forest_summary = r_forest_results[['params', 'mean_test_score', 'rank_test_score']].sort_values(by='rank_test_score')
-# r_forest_validator = evaluator("Tuned Random Forest Classifier", best_r_forest_model, X_valid, y_valid)
-# conf_mat_r_forest = plot_confusion_matrix(best_r_forest_model, X_valid, y_valid, 'Random Forest Classifier')
-
+best_r_forest_model, best_r_forest_params, r_forest_results = tune_r_forest(X_train, y_train)
+r_forest_summary = r_forest_results[['params', 'mean_test_score', 'rank_test_score']].sort_values(by='rank_test_score')
+r_forest_validator = evaluator("Tuned Random Forest Classifier", best_r_forest_model, X_valid, y_valid)
+conf_mat_r_forest = plot_confusion_matrix(best_r_forest_model, X_valid, y_valid, 'Random Forest Classifier')
+print(conf_mat_r_forest)
+print(best_r_forest_params)
 
 # XGBoostClassifier
 
@@ -121,7 +121,8 @@ from modeler import xgboost_model
 # xgboost_summary = xgboost_results[['params', 'mean_test_score', 'rank_test_score']].sort_values(by='rank_test_score')
 # xgboost_validator = evaluator('Tuned XGBoost Classifier', best_xgboost_model, X_valid, y_valid)
 # conf_mat_xgboost = plot_confusion_matrix(best_xgboost_model, X_valid, y_valid, 'XGBoost Classifier')
-
+# print(best_xgboost_model)
+# print(conf_mat_xgboost)
 
 # CatBoostClassifier
 
