@@ -82,15 +82,6 @@ def mapper(df: pd.DataFrame) -> pd.DataFrame:
                                                  .astype('string').str.strip().str.replace(' ', '_', regex=False))
 
 
-    # hoepa_status
-    temp_df['hoepa_status'] = temp_df['hoepa_status'].map({
-        1: 'High-cost mortgage',
-        2: 'Not high-cost',
-        1111: 'Exempt'})
-    temp_df['hoepa_status'] = (temp_df['hoepa_status'].fillna('Missing')
-                               .astype('string').str.strip().str.replace(' ', '_', regex=False))
-
-
     # negative_amortization
     temp_df['negative_amortization'] = temp_df['negative_amortization'].map({
         1: 'Yes',

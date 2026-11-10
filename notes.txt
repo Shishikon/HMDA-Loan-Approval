@@ -1,16 +1,3 @@
-TO-DO:
-1. ADD CATBOOST AND SVM
-2. TEST ALL TUNERS FOR CONFUSION MATRIX!
-
-
-
-
-Roadmap to Finish the Project
-
-Step 8 — Hyperparameter tuning (GridSearchCV or RandomizedSearchCV with cross-validation on train set only)
-
-Step 9 — Final evaluation on test set (run once, report final numbers — don’t tune after seeing test results)
-
 
 
 Commits:

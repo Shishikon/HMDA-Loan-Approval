@@ -17,13 +17,12 @@ from sklearn.ensemble import RandomForestClassifier
 from xgboost import XGBClassifier
 
 
-from sklearn.model_selection import GridSearchCV, RandomizedSearchCV
+from sklearn.model_selection import GridSearchCV
 
 from sklearn.metrics import (accuracy_score, balanced_accuracy_score,
                              precision_score, recall_score, f1_score,
                              confusion_matrix, ConfusionMatrixDisplay,
                              roc_auc_score, classification_report)
-from catboost import CatBoostClassifier
 
 
 
@@ -31,13 +30,13 @@ from catboost import CatBoostClassifier
 RANDOM_STATE = 42
 
 numeric_cols = [
-    'loan_amount', 'loan_to_value_ratio', 'loan_term', 'property_value', 
-    'income', 'debt_to_income_ratio', 'tract_population', 
-    'tract_minority_population_percent', 'ffiec_msa_md_median_family_income', 
-    'tract_to_msa_income_percentage', 'tract_owner_occupied_units', 
-    'tract_one_to_four_family_homes', 'tract_median_age_of_housing_units', 
-    'applicant_age_not_applicable', 'applicant_age_ord', 
-    'coapplicant_age_not_applicable', 'coapplicant_age_ord', 
+    'loan_amount', 'loan_to_value_ratio', 'loan_term', 'property_value',
+    'income', 'debt_to_income_ratio', 'tract_population',
+    'tract_minority_population_percent', 'ffiec_msa_md_median_family_income',
+    'tract_to_msa_income_percentage', 'tract_owner_occupied_units',
+    'tract_one_to_four_family_homes', 'tract_median_age_of_housing_units',
+    'applicant_age_not_applicable', 'applicant_age_ord',
+    'coapplicant_age_not_applicable', 'coapplicant_age_ord',
     'is_single_family', 'no_coapplicant'
 ]
 
@@ -45,10 +44,10 @@ categorical_cols = [
     'conforming_loan_limit', 'derived_loan_product_type', 'derived_ethnicity',
     'derived_race', 'derived_sex', 'preapproval', 'loan_type', 'lien_status',
     'reverse_mortgage', 'open-end_line_of_credit', 'business_or_commercial_purpose',
-    'negative_amortization', 'interest_only_payment', 'balloon_payment', 
-    'other_nonamortizing_features', 'construction_method', 'occupancy_type', 
-    'manufactured_home_secured_property_type', 'manufactured_home_land_property_interest', 
-    'applicant_credit_score_type', 'co-applicant_credit_score_type', 
+    'negative_amortization', 'interest_only_payment', 'balloon_payment',
+    'other_nonamortizing_features', 'construction_method', 'occupancy_type',
+    'manufactured_home_secured_property_type', 'manufactured_home_land_property_interest',
+    'applicant_credit_score_type', 'co-applicant_credit_score_type',
     'applicant_ethnicity-1', 'co-applicant_ethnicity-1', 'applicant_ethnicity_observed',
     'co-applicant_ethnicity_observed', 'applicant_race-1', 'co-applicant_race-1',
     'applicant_race_observed', 'co-applicant_race_observed', 'applicant_sex',
@@ -279,15 +278,9 @@ def tune_log_reg(X_train, y_train):
             solver='lbfgs'))])
 
     params = {
-        'model__C': [0.001, 0.01, 0.1, 1, 10, 100],
-        'model__class_weight': [None, 'balanced'],
-        'model__solver': ['lbfgs'],
-        'model__max_iter': [2000]
+        'model__C': [0.01, 1, 100],
+        'model__class_weight': [None, 'balanced']
     }
-
-    best_params_conf_matrix = {
-        'model__C': [0.01],
-        'model__class_weight': ['balanced']}
 
     grid_search = GridSearchCV(
         estimator=log_reg_pipeline,
@@ -309,21 +302,10 @@ def tune_dec_tree(X_train, y_train):
             random_state=RANDOM_STATE))])
 
     params = {
-        'model__max_depth': [5, 10, None],
+        'model__max_depth': [5, 10, 20],
         'model__class_weight': ['balanced'],
-        'model__max_features': [None, 'sqrt', 0.5],
-        'model__min_samples_split': [2, 5, 10],
-        'model__min_samples_leaf': [1, 3, 5],
+        'model__min_samples_leaf': [1, 5],
         'model__criterion': ['gini', 'entropy']
-    }
-
-    best_params_conf_matrix = {
-        'model__max_depth': [10],
-        'model__class_weight': ['balanced'],
-        'model__max_features': [0.5],
-        'model__min_samples_split': [5],
-        'model__min_samples_leaf': [3],
-        'model__criterion': ['gini']
     }
 
     grid_search = GridSearchCV(
@@ -341,31 +323,17 @@ def tune_dec_tree(X_train, y_train):
 
 
 def tune_r_forest(X_train, y_train):
-    # from imblearn.over_sampling import SMOTE
-    # from imblearn.pipeline import Pipeline
-
     r_forest_pipeline = Pipeline(steps=[
         ('preprocessor', preprocessor_not_scaled),
-        # ('smote', SMOTE(random_state=RANDOM_STATE)),
         ('model', RandomForestClassifier(
             random_state=RANDOM_STATE,
             n_jobs=-1))])
 
     params = {
-        'model__n_estimators': [200, 500],
-        'model__max_depth': [10, 20, None],
+        'model__n_estimators': [100, 300],
+        'model__max_depth': [10, None],
         'model__class_weight': ['balanced', 'balanced_subsample'],
-        'model__max_features': ['sqrt', 0.5],
-        'model__min_samples_leaf': [1, 4],
-        'model__min_samples_split': [2, 10]
-    }
-
-    best_params_conf_matrix = {
-        'model__n_estimators': [300],
-        'model__max_depth': [10, 15],
-        'model__class_weight': ['balanced'],
-        'model__max_features': ['sqrt', 0.5],
-        'model__min_samples_leaf': [1, 3]
+        'model__max_features': ['sqrt']
     }
 
     grid_search = GridSearchCV(
@@ -388,68 +356,22 @@ def tune_xgboost(X_train, y_train):
             n_jobs=-1))])
 
     params = {
-        'model__n_estimators': [100, 200, 300],
-        'model__max_depth': [3, 5, 7],
-        'model__learning_rate': [0.01, 0.1, 0.2],
-        'model__subsample': [0.8, 1.0],
-        'model__colsample_bytree': [0.8, 1.0]
-    }
-    best_params_conf_matrix = {
-        'model__n_estimators': [300],
-        'model__max_depth': [5],
-        'model__learning_rate': [0.01],
-        'model__subsample': [0.8, 1.0],
-        'model__colsample_bytree': [0.8, 1.0]
+        'model__n_estimators': [100, 300],
+        'model__max_depth': [3, 5],
+        'model__learning_rate': [0.05, 0.1],
+        'model__subsample': [0.8]
     }
 
     grid_search = GridSearchCV(
         estimator=xgboost_pipeline,
-        param_grid=best_params_conf_matrix,
+        param_grid=params,
         cv=3,
-        scoring={'f1_macro': 'f1_macro', 'accuracy': 'accuracy'},
-        refit = 'f1_macro',
+        scoring='f1_macro',
         n_jobs=-1,
         verbose=1)
     grid_search.fit(X_train, y_train)
     xgboost_results_df = pd.DataFrame(grid_search.cv_results_)
     return grid_search.best_estimator_, grid_search.best_params_, xgboost_results_df
-
-
-
-def tune_catboost(X_train, y_train):
-    catboost_pipeline = Pipeline(steps=[
-        ('preprocessor', preprocessor_not_scaled),
-        ('model', CatBoostClassifier(
-            random_seed=RANDOM_STATE,
-            thread_count=-1,
-            # Set to 1 so GridSearchCV's n_jobs=-1 handles parallelization cleanly without thread conflicts
-            verbose=False,  # Keeps training logs clean during grid search
-         bootstrap_type='Bernoulli',
-            auto_class_weights='Balanced'
-        ))
-    ])
-
-    # CatBoost parameter equivalents
-    params = {
-        'model__iterations': [300],  # Equivalent to n_estimators
-        'model__depth': [3, 5],  # Equivalent to max_depth
-        'model__learning_rate': [0.01],
-        'model__subsample': [0.8]
-    }
-
-    grid_search = GridSearchCV(
-        estimator=catboost_pipeline,
-        param_grid=params,
-        cv=3,
-        scoring='f1_macro',
-        n_jobs=-1,
-        verbose=1
-    )
-
-    grid_search.fit(X_train, y_train)
-    catboost_results_df = pd.DataFrame(grid_search.cv_results_)
-
-    return grid_search.best_estimator_, grid_search.best_params_, catboost_results_df
 
 
 # Confusion Matrix
