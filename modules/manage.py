@@ -1,3 +1,4 @@
+from catboost import CatBoostClassifier
 from numpy.testing import print_coercion_tables
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
@@ -9,7 +10,7 @@ from EDA import *
 from modules.audit import auditor, summarizer
 from mapper import mapper
 from modules.modeler import (tune_log_reg, evaluator, tune_dec_tree,
-                             tune_r_forest, tune_xgboost, plot_confusion_matrix)
+                             tune_r_forest, tune_xgboost, plot_confusion_matrix, tune_catboost)
 
 pd.set_option('display.max_rows', None)
 
@@ -122,4 +123,11 @@ from modeler import xgboost_model
 # conf_mat_xgboost = plot_confusion_matrix(best_xgboost_model, X_valid, y_valid, 'XGBoost Classifier')
 
 
+# CatBoostClassifier
 
+best_catboost_model, best_catboost_params, catboost_results = tune_catboost(X_train, y_train)
+catboost_summary = catboost_results[['params', 'mean_test_score', 'rank_test_score']].sort_values(by='rank_test_score')
+catboost_validator = evaluator('Tuned CatBoost Classifier', best_catboost_model, X_valid, y_valid)
+conf_mat_catboost = plot_confusion_matrix(best_catboost_model, X_valid, y_valid, 'CatBoost Classifier')
+print(conf_mat_catboost)
+print(best_catboost_params)

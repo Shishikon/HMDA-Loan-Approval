@@ -17,13 +17,13 @@ from sklearn.ensemble import RandomForestClassifier
 from xgboost import XGBClassifier
 
 
-from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import GridSearchCV, RandomizedSearchCV
 
 from sklearn.metrics import (accuracy_score, balanced_accuracy_score,
                              precision_score, recall_score, f1_score,
                              confusion_matrix, ConfusionMatrixDisplay,
                              roc_auc_score, classification_report)
-
+from catboost import CatBoostClassifier
 
 
 
@@ -413,6 +413,43 @@ def tune_xgboost(X_train, y_train):
     grid_search.fit(X_train, y_train)
     xgboost_results_df = pd.DataFrame(grid_search.cv_results_)
     return grid_search.best_estimator_, grid_search.best_params_, xgboost_results_df
+
+
+
+def tune_catboost(X_train, y_train):
+    catboost_pipeline = Pipeline(steps=[
+        ('preprocessor', preprocessor_not_scaled),
+        ('model', CatBoostClassifier(
+            random_seed=RANDOM_STATE,
+            thread_count=-1,
+            # Set to 1 so GridSearchCV's n_jobs=-1 handles parallelization cleanly without thread conflicts
+            verbose=False,  # Keeps training logs clean during grid search
+         bootstrap_type='Bernoulli',
+            auto_class_weights='Balanced'
+        ))
+    ])
+
+    # CatBoost parameter equivalents
+    params = {
+        'model__iterations': [300],  # Equivalent to n_estimators
+        'model__depth': [3, 5],  # Equivalent to max_depth
+        'model__learning_rate': [0.01],
+        'model__subsample': [0.8]
+    }
+
+    grid_search = GridSearchCV(
+        estimator=catboost_pipeline,
+        param_grid=params,
+        cv=3,
+        scoring='f1_macro',
+        n_jobs=-1,
+        verbose=1
+    )
+
+    grid_search.fit(X_train, y_train)
+    catboost_results_df = pd.DataFrame(grid_search.cv_results_)
+
+    return grid_search.best_estimator_, grid_search.best_params_, catboost_results_df
 
 
 # Confusion Matrix

@@ -18,6 +18,7 @@ scipy==1.17.1
 six==1.17.0
 threadpoolctl==3.7.0
 tzdata==2026.5
-xgboost
-seaborn
+xgboost~=3.4.1
+seaborn~=0.13.2
 imbalanced-learn
+catboost~=1.2.10
