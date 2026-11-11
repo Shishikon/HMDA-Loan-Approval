@@ -8,8 +8,7 @@ config.py
 /logs/
  *.txt
 
-ipynb_checkpoints
-*.ipynb
+
 
 .venv
 venv
@@ -17,4 +16,3 @@ venv
 env
 
 Files/
-.aider*

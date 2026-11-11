@@ -1,32 +1,27 @@
+import numpy as np
 import pandas as pd
 import seaborn as sns
 from matplotlib import pyplot as plt
-
 
 from sklearn.pipeline import Pipeline
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.compose import ColumnTransformer
 
-
 from sklearn.dummy import DummyClassifier
-
 from sklearn.linear_model import LogisticRegression
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
 from xgboost import XGBClassifier
 
-
 from sklearn.model_selection import GridSearchCV
-
 from sklearn.metrics import (accuracy_score, balanced_accuracy_score,
                              precision_score, recall_score, f1_score,
                              confusion_matrix, ConfusionMatrixDisplay,
                              roc_auc_score, classification_report)
 
 
-
-# Modeling Global Config
+# ============================== Modeling Global Config ==============================
 RANDOM_STATE = 42
 
 numeric_cols = [
@@ -57,7 +52,8 @@ categorical_cols = [
     'derived_dwelling_category', 'derived_msa-md'
 ]
 
-# Pipelines for Data Preprocessing
+
+# ============================== Preprocessing Pipelines ==============================
 numeric_scaled = Pipeline([
     ("imputer", SimpleImputer(strategy="median")),
     ("scaler", StandardScaler())])
@@ -75,15 +71,14 @@ preprocessor_scaled = ColumnTransformer(transformers=[
 
 preprocessor_not_scaled = ColumnTransformer(transformers=[
     ('num', numeric_not_scaled, numeric_cols),
-    ('cat', categorical_pipeline, categorical_cols),], remainder='drop')
+    ('cat', categorical_pipeline, categorical_cols)], remainder='drop')
 
 
-# Central Evaluation Function
+# ============================== Central Evaluation Function ==============================
 def evaluator(name, model, X_true, y_true):
     pred = model.predict(X_true)
     probabilities = model.predict_proba(X_true)
 
-    # Calculate metrics
     acc = accuracy_score(y_true, pred)
     bal_acc = balanced_accuracy_score(y_true, pred)
     prec = precision_score(y_true, pred, average='weighted', zero_division=0)
@@ -106,7 +101,8 @@ def evaluator(name, model, X_true, y_true):
     }
     metrics_df = pd.DataFrame(list(metrics_dict.items()), columns=['Metric', 'Score'])
 
-    sns.barplot(data=metrics_df, x='Score', y='Metric', hue='Metric', legend=False, ax=axes[0], palette='Blues_r')
+    sns.barplot(data=metrics_df, x='Score', y='Metric', hue='Metric', legend=False,
+                ax=axes[0], palette='Blues_r')
     axes[0].set_xlim(0, 1.0)
     axes[0].set_title('Core Performance Metrics', fontsize=12, fontweight='bold')
     axes[0].set_xlabel('Score Value')
@@ -120,8 +116,10 @@ def evaluator(name, model, X_true, y_true):
     report_dict = classification_report(y_true, pred, output_dict=True, zero_division=0)
     report_df = pd.DataFrame(report_dict).iloc[:-1, :-3].T
 
-    sns.heatmap(report_df, annot=True, cmap='Blues', fmt='.2f', cbar=False, ax=axes[1], linewidths=0.5)
-    axes[1].set_title('Class-wise Performance (Precision, Recall, F1)', fontsize=12, fontweight='bold')
+    sns.heatmap(report_df, annot=True, cmap='Blues', fmt='.2f', cbar=False,
+                ax=axes[1], linewidths=0.5)
+    axes[1].set_title('Class-wise Performance (Precision, Recall, F1)',
+                      fontsize=12, fontweight='bold')
     axes[1].set_xlabel('Metrics')
     axes[1].set_ylabel('Classes')
 
@@ -140,8 +138,149 @@ def evaluator(name, model, X_true, y_true):
         "classification_report": report_str}
 
 
-# ============================== Dummy Classifier ==============================
+# ============================== Confusion Matrix ==============================
+def plot_confusion_matrix(model, X_valid, y_valid, model_name):
+    y_pred = model.predict(X_valid)
+    cm = confusion_matrix(y_valid, y_pred, labels=[0, 1, 2])
 
+    fig, ax = plt.subplots(figsize=(8, 6))
+    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=[0, 1, 2])
+    disp.plot(cmap='Blues', values_format='d', ax=ax, colorbar=True)
+    ax.set_title(f'Confusion Matrix - {model_name}', fontsize=14, pad=15)
+    fig.tight_layout()
+    plt.show()
+
+    return cm
+
+
+# ============================== Feature Importance ==============================
+def plot_feature_importance(model, model_name, top_n=20):
+    preprocessor = model.named_steps['preprocessor']
+    classifier = model.named_steps['model']
+
+    try:
+        ohe = preprocessor.named_transformers_['cat'].named_steps['encoder']
+        cat_feature_names = ohe.get_feature_names_out(categorical_cols).tolist()
+    except Exception:
+        cat_feature_names = []
+
+    feature_names = numeric_cols + cat_feature_names
+
+    # Decision Tree, Random Forest, XGBoost
+    if hasattr(classifier, 'feature_importances_'):
+        importances = classifier.feature_importances_
+        importance_label = 'Feature Importance (Gini / Gain)'
+
+        # Logistic Regression - multiclass gives one row, takes the mean abs
+    elif hasattr(classifier, 'coef_'):
+        importances = np.abs(classifier.coef_).mean(axis=0)
+        importance_label = 'Mean |Coefficient| Across Classes'
+    else:
+        fig, ax = plt.subplots(figsize=(6, 1))
+        ax.axis('off')
+        ax.text(0.5, 0.5, f'Feature importance not available for {type(classifier).__name__}',
+                ha='center', va='center', fontsize=12, color='grey',
+                transform=ax.transAxes)
+        plt.tight_layout()
+        plt.show()
+        return None
+
+    importance_df = pd.DataFrame({
+        'Feature': feature_names[:len(importances)],
+        'Importance': importances
+    }).sort_values('Importance', ascending=False).head(top_n)
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+    sns.barplot(data=importance_df, x='Importance', y='Feature',
+                hue='Feature', legend=False, palette='Blues_r', ax=ax)
+    ax.set_title(f'Top {top_n} Feature Importances — {model_name}',
+                 fontsize=13, fontweight='bold')
+    ax.set_xlabel(importance_label)
+    ax.set_ylabel('')
+    plt.tight_layout()
+    plt.show()
+    return importance_df
+
+
+# ============================== Threshold Analysis ==============================
+def find_best_threshold(model, X_valid, y_valid, model_name, target_class):
+    thresholds = np.arange(0.10, 0.90, 0.05)
+    probabilities = model.predict_proba(X_valid)
+
+    results = []
+    for thresh in thresholds:
+        # Override: if P(target_class) >= threshold, predict target_class
+        preds = model.predict(X_valid).copy()
+        preds[probabilities[:, target_class] >= thresh] = target_class
+
+        f1_macro = f1_score(y_valid, preds, average='macro', zero_division=0)
+        recall_target = recall_score(y_valid, preds, average=None,
+                                     zero_division=0)[target_class]
+        results.append({
+            'threshold': round(thresh, 2),
+            'macro_f1': f1_macro,
+            f'recall_class_{target_class}': recall_target
+        })
+
+    results_df = pd.DataFrame(results)
+    best_row = results_df.loc[results_df['macro_f1'].idxmax()]
+    best_threshold = best_row['threshold']
+
+    fig, ax = plt.subplots(figsize=(9, 4))
+    ax.plot(results_df['threshold'], results_df['macro_f1'],
+            marker='o', color='steelblue', label='Macro F1')
+    ax.plot(results_df['threshold'], results_df[f'recall_class_{target_class}'],
+            marker='s', color='salmon', linestyle='--',
+            label=f'Recall Class {target_class}')
+    ax.axvline(best_threshold, color='green', linestyle=':', linewidth=2,
+               label=f'Best threshold = {best_threshold:.2f}')
+    ax.set_title(f'Threshold Analysis — {model_name}', fontsize=13, fontweight='bold')
+    ax.set_xlabel('Threshold')
+    ax.set_ylabel('Score')
+    ax.legend()
+    plt.tight_layout()
+    plt.show()
+
+    summary_df = pd.DataFrame([{
+        'Model': model_name,
+        'Target Class': target_class,
+        'Best Threshold': f"{best_threshold:.2f}",
+        'Macro F1 at Best Threshold': f"{best_row['macro_f1']:.4f}",
+        f'Recall Class {target_class} at Best Threshold': f"{best_row[f'recall_class_{target_class}']:.4f}"}])
+
+    fig, ax = plt.subplots(figsize=(10, 1.2))
+    ax.axis('off')
+    tbl = ax.table(
+        cellText=summary_df.values,
+        colLabels=summary_df.columns,
+        cellLoc='center',
+        loc='center')
+    tbl.auto_set_font_size(False)
+    tbl.set_fontsize(10)
+    tbl.scale(1, 1.6)
+
+    for (row, col), cell in tbl.get_celld().items():
+        if row == 0:
+            cell.set_facecolor('#2c5f8a')
+            cell.set_text_props(color='white', fontweight='bold')
+        else:
+            cell.set_facecolor('#d9eaf7')
+    ax.set_title('Threshold Selection Summary', fontsize=11,
+                 fontweight='bold', pad=12)
+    plt.tight_layout()
+    plt.show()
+
+    return best_threshold, results_df
+
+
+def predict_with_threshold(model, X, threshold, target_class):
+    probabilities = model.predict_proba(X)
+    preds = model.predict(X).copy()
+    preds[probabilities[:, target_class] >= threshold] = target_class
+    return preds
+
+
+# ============================== Baseline ==============================
 def baseline_model(X_train, y_train, X_valid, y_valid):
     dummy = Pipeline(steps=[
         ('preprocessor', preprocessor_scaled),
@@ -151,131 +290,14 @@ def baseline_model(X_train, y_train, X_valid, y_valid):
     baseline = evaluator('Dummy Classifier', dummy, X_valid, y_valid)
     return baseline
 
-# ============================== Logistic Regression ==============================
-def log_unbalanced_model(X_train, y_train, X_valid, y_valid):
-    logistic_pipeline = Pipeline(steps=[
-        ('preprocessor', preprocessor_scaled),
-        ('model', LogisticRegression(
-            max_iter=1000,
-            solver='lbfgs',
-            random_state=RANDOM_STATE))])
 
-    logistic_pipeline.fit(X_train, y_train)
-
-    log_unbalanced_valid = evaluator("Unbalanced Logistic Regression", logistic_pipeline, X_valid, y_valid)
-    return log_unbalanced_valid
-
-
-def log_balanced_model(X_train, y_train, X_valid, y_valid):
-    logistic_pipeline_balanced = Pipeline(steps=[
-        ('preprocessor', preprocessor_scaled),
-        ('model', LogisticRegression(
-            max_iter=1000,
-            class_weight='balanced',
-            random_state=RANDOM_STATE))])
-
-    logistic_pipeline_balanced.fit(X_train, y_train)
-    log_balanced_valid = evaluator("Balanced Logistic Regression", logistic_pipeline_balanced, X_valid, y_valid)
-    return log_balanced_valid
-
-
-# ============================== Decision Tree Classifier ==============================
-def dec_tree_unbalanced_model(X_train, y_train, X_valid, y_valid):
-    dt_pipeline = Pipeline(steps=[
-        ('preprocessor', preprocessor_not_scaled),
-        ('model', DecisionTreeClassifier(
-            max_depth=10,
-            random_state=RANDOM_STATE))])
-
-    dt_pipeline.fit(X_train, y_train)
-    dec_tree_unbalanced_valid =  evaluator('Unbalanced Decision Tree', dt_pipeline, X_valid, y_valid)
-    return dec_tree_unbalanced_valid
-
-
-def dec_tree_balanced_model(X_train, y_train, X_valid, y_valid):
-    dt_balanced_pipeline = Pipeline(steps=[
-        ('preprocessor', preprocessor_not_scaled),
-        ('model', DecisionTreeClassifier(
-            max_depth=10,
-            class_weight='balanced',
-            random_state=RANDOM_STATE))])
-
-    dt_balanced_pipeline.fit(X_train, y_train)
-    dec_tree_balanced_valid =  evaluator('Balanced Decision Tree', dt_balanced_pipeline, X_valid, y_valid)
-    return dec_tree_balanced_valid
-
-
-# ============================== Random Forest Classifier ==============================
-def r_forest_unbalanced_model(X_train, y_train, X_valid, y_valid):
-    r_forest_pipeline = Pipeline(steps=[
-        ('preprocessor', preprocessor_not_scaled),
-        ('model', RandomForestClassifier(
-            n_estimators=100,
-            n_jobs=-1,
-            random_state=RANDOM_STATE))])
-
-    r_forest_pipeline.fit(X_train, y_train)
-    r_forest_unbalanced_valid =  evaluator("Unbalanced-Unscaled Random Forest",
-                                           r_forest_pipeline, X_valid, y_valid)
-    return r_forest_unbalanced_valid
-
-
-def r_forest_balanced_model(X_train, y_train, X_valid, y_valid):
-    r_forest_balanced_pipeline = Pipeline(steps=[
-        ('preprocessor', preprocessor_not_scaled),
-        ('model', RandomForestClassifier(
-            n_estimators=100,
-            class_weight='balanced',
-            n_jobs=-1,
-            random_state=RANDOM_STATE))])
-
-    r_forest_balanced_pipeline.fit(X_train, y_train)
-    r_forest_balanced_valid = evaluator("Balanced-Unscaled Random Forest",
-                                        r_forest_balanced_pipeline, X_valid, y_valid)
-    return r_forest_balanced_valid
-
-
-def r_forest_subsample_model(X_train, y_train, X_valid, y_valid):
-    r_forest_subsample_pipeline = Pipeline(steps=[
-        ('preprocessor', preprocessor_not_scaled),
-        ('model', RandomForestClassifier(
-            n_estimators=100,
-            class_weight='balanced_subsample',
-            n_jobs=-1,
-            random_state=RANDOM_STATE))])
-
-    r_forest_subsample_pipeline.fit(X_train, y_train)
-    r_forest_subsample_valid =  evaluator("Subsample_balanced-Unscaled Random Forest",
-                                          r_forest_subsample_pipeline, X_valid, y_valid)
-    return r_forest_subsample_valid
-
-
-# ============================== XGBoost Classifier ==============================
-def xgboost_model(X_train, y_train, X_valid, y_valid):
-    xgboost_pipeline = Pipeline(steps=[
-        ('preprocessor', preprocessor_not_scaled),
-        ('model', XGBClassifier(
-            n_estimators=300,
-            learning_rate=0.1,
-            max_depth=5,
-            random_state=RANDOM_STATE,
-            n_jobs=-1))])
-
-    xgboost_pipeline.fit(X_train, y_train)
-    xgboost_valid =  evaluator('XGBoost', xgboost_pipeline, X_valid, y_valid)
-    return xgboost_valid
-
-
-
-# Tuning
-
-def tune_log_reg(X_train, y_train):
+# ============================== Tuning Functions ==============================
+def tune_log_reg(X_train, y_train, X_valid, y_valid):
     log_reg_pipeline = Pipeline(steps=[
         ('preprocessor', preprocessor_scaled),
         ('model', LogisticRegression(
-            max_iter=1000,
-            random_state=RANDOM_STATE,
-            solver='lbfgs'))])
+            max_iter=2000,
+            random_state=RANDOM_STATE))])
 
     params = {
         'model__C': [0.01, 1, 100],
@@ -289,24 +311,28 @@ def tune_log_reg(X_train, y_train):
         scoring='f1_macro',
         n_jobs=-1,
         verbose=1)
+
     grid_search.fit(X_train, y_train)
     results_df = pd.DataFrame(grid_search.cv_results_)
 
-    return grid_search.best_estimator_, grid_search.best_params_, results_df
+    eval_results = evaluator('Logistic Regression (Tuned)',
+                             grid_search.best_estimator_, X_valid, y_valid)
+
+    plot_feature_importance(grid_search.best_estimator_,
+                            'Logistic Regression (Tuned)')
+    return grid_search.best_estimator_, grid_search.best_params_, results_df, eval_results
 
 
-def tune_dec_tree(X_train, y_train):
+def tune_dec_tree(X_train, y_train, X_valid, y_valid):
     dec_tree_pipeline = Pipeline(steps=[
         ('preprocessor', preprocessor_not_scaled),
-        ('model', DecisionTreeClassifier(
-            random_state=RANDOM_STATE))])
+        ('model', DecisionTreeClassifier(random_state=RANDOM_STATE))])
 
     params = {
         'model__max_depth': [5, 10, 20],
         'model__class_weight': ['balanced'],
         'model__min_samples_leaf': [1, 5],
-        'model__criterion': ['gini', 'entropy']
-    }
+        'model__criterion': ['gini', 'entropy']}
 
     grid_search = GridSearchCV(
         estimator=dec_tree_pipeline,
@@ -319,10 +345,16 @@ def tune_dec_tree(X_train, y_train):
     grid_search.fit(X_train, y_train)
     dt_results_df = pd.DataFrame(grid_search.cv_results_)
 
-    return grid_search.best_estimator_, grid_search.best_params_, dt_results_df
+    eval_results = evaluator('Decision Tree (Tuned)',
+                             grid_search.best_estimator_, X_valid, y_valid)
+
+    plot_feature_importance(grid_search.best_estimator_,
+                            'Decision Tree (Tuned)')
+
+    return grid_search.best_estimator_, grid_search.best_params_, dt_results_df, eval_results
 
 
-def tune_r_forest(X_train, y_train):
+def tune_r_forest(X_train, y_train, X_valid, y_valid):
     r_forest_pipeline = Pipeline(steps=[
         ('preprocessor', preprocessor_not_scaled),
         ('model', RandomForestClassifier(
@@ -333,8 +365,7 @@ def tune_r_forest(X_train, y_train):
         'model__n_estimators': [100, 300],
         'model__max_depth': [10, None],
         'model__class_weight': ['balanced', 'balanced_subsample'],
-        'model__max_features': ['sqrt']
-    }
+        'model__max_features': ['sqrt']}
 
     grid_search = GridSearchCV(
         estimator=r_forest_pipeline,
@@ -343,12 +374,20 @@ def tune_r_forest(X_train, y_train):
         scoring='f1_macro',
         n_jobs=-1,
         verbose=1)
+
     grid_search.fit(X_train, y_train)
     r_forest_results_df = pd.DataFrame(grid_search.cv_results_)
-    return grid_search.best_estimator_, grid_search.best_params_, r_forest_results_df
+
+    eval_results = evaluator('Random Forest (Tuned)',
+                             grid_search.best_estimator_, X_valid, y_valid)
+
+    plot_feature_importance(grid_search.best_estimator_,
+                            'Random Forest (Tuned)')
+
+    return grid_search.best_estimator_, grid_search.best_params_, r_forest_results_df, eval_results
 
 
-def tune_xgboost(X_train, y_train):
+def tune_xgboost(X_train, y_train, X_valid, y_valid):
     xgboost_pipeline = Pipeline(steps=[
         ('preprocessor', preprocessor_not_scaled),
         ('model', XGBClassifier(
@@ -358,8 +397,7 @@ def tune_xgboost(X_train, y_train):
     params = {
         'model__n_estimators': [100, 300],
         'model__max_depth': [3, 5],
-        'model__learning_rate': [0.05, 0.1],
-        'model__subsample': [0.8]
+        'model__learning_rate': [0.05, 0.1, 0.2]
     }
 
     grid_search = GridSearchCV(
@@ -369,48 +407,117 @@ def tune_xgboost(X_train, y_train):
         scoring='f1_macro',
         n_jobs=-1,
         verbose=1)
+
     grid_search.fit(X_train, y_train)
     xgboost_results_df = pd.DataFrame(grid_search.cv_results_)
-    return grid_search.best_estimator_, grid_search.best_params_, xgboost_results_df
+
+    eval_results = evaluator('XGBoost (Tuned)',
+                             grid_search.best_estimator_, X_valid, y_valid)
+
+    plot_feature_importance(grid_search.best_estimator_,
+                            'XGBoost (Tuned)')
+
+    return grid_search.best_estimator_, grid_search.best_params_, xgboost_results_df, eval_results
 
 
-# Confusion Matrix
-def plot_confusion_matrix(model, X_valid, y_valid, model_name):
-    y_pred = model.predict(X_valid)
-    cm = confusion_matrix(
-        y_valid,
-        y_pred,
-        labels=[0, 1, 2])
+# ============================== Final Test Evaluation ==============================
+def evaluate_winner_on_test(winner_model, winner_name, X_valid, y_valid,
+                             X_test, y_test, target_class):
 
+    # Find best threshold on validation
+    best_threshold, threshold_df = find_best_threshold(
+        winner_model, X_valid, y_valid, winner_name, target_class=target_class)
+
+    # Apply threshold to test set - TEST SIZE
+    y_pred_test = predict_with_threshold(
+        winner_model, X_test, best_threshold, target_class=target_class)
+
+    # Confusion matrix on test
+    cm = confusion_matrix(y_test, y_pred_test, labels=[0, 1, 2])
     fig, ax = plt.subplots(figsize=(8, 6))
-    disp = ConfusionMatrixDisplay(
-        confusion_matrix=cm,
-        display_labels=[0, 1, 2])
-
-    disp.plot(
-        cmap='Blues',
-        values_format='d',
-        ax=ax,
-        colorbar=True
-    )
-
-    ax.set_title(f'Confusion Matrix - {model_name}',
-        fontsize=14, pad=15)
+    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=[0, 1, 2])
+    disp.plot(cmap='Blues', values_format='d', ax=ax, colorbar=True)
+    ax.set_title(f'Test Set Confusion Matrix — {winner_name}', fontsize=14, pad=15)
     fig.tight_layout()
     plt.show()
 
-    return cm
+    # Final metrics on test
+    test_macro_f1 = f1_score(y_test, y_pred_test, average='macro', zero_division=0)
+    test_bal_acc  = balanced_accuracy_score(y_test, y_pred_test)
+    test_weighted_f1 = f1_score(y_test, y_pred_test, average='weighted', zero_division=0)
+    test_roc_auc  = roc_auc_score(
+        y_test, winner_model.predict_proba(X_test), multi_class='ovr', average='macro')
 
+    metrics_dict = {
+        'Balanced Accuracy': test_bal_acc,
+        'Weighted F1':       test_weighted_f1,
+        'Macro F1':          test_macro_f1,
+        'ROC-AUC (Macro)':   test_roc_auc}
 
+    metrics_df = pd.DataFrame(list(metrics_dict.items()), columns=['Metric', 'Score'])
 
+    fig, axes = plt.subplots(1, 2, figsize=(14, 5), gridspec_kw={'width_ratios': [1, 1.4]})
+    fig.suptitle(f'Final Test Results — {winner_name}  |  Threshold {best_threshold:.2f} '
+                 f'on class {target_class}', fontsize=14, fontweight='bold', y=1.01)
 
+    sns.barplot(data=metrics_df, x='Score', y='Metric', hue='Metric',
+                legend=False, ax=axes[0], palette='Blues_r')
+    axes[0].set_xlim(0, 1.0)
+    axes[0].set_title('Headline Metrics (Test Set)', fontsize=12, fontweight='bold')
+    axes[0].set_xlabel('Score')
+    axes[0].set_ylabel('')
+    for p in axes[0].patches:
+        w = p.get_width()
+        axes[0].text(w + 0.02, p.get_y() + p.get_height() / 2,
+                     f'{w:.4f}', va='center', ha='left', fontsize=10, fontweight='bold')
 
+    report_dict = classification_report(y_test, y_pred_test, output_dict=True, zero_division=0)
+    report_df = pd.DataFrame(report_dict).iloc[:-1, :-3].T
+    sns.heatmap(report_df, annot=True, cmap='Blues', fmt='.2f', cbar=False,
+                ax=axes[1], linewidths=0.5)
+    axes[1].set_title('Per-Class Report (Test Set)', fontsize=12, fontweight='bold')
+    axes[1].set_xlabel('Metrics')
+    axes[1].set_ylabel('Classes')
 
+    plt.tight_layout()
+    plt.show()
 
+    # Summary table
+    summary_data = {
+        'Model': [winner_name],
+        'Set': ['Test'],
+        'Threshold': [f"{best_threshold:.2f}"],
+        'Macro F1': [f"{test_macro_f1:.4f}"],
+        'Balanced Acc': [f"{test_bal_acc:.4f}"],
+        'Weighted F1': [f"{test_weighted_f1:.4f}"],
+        'ROC-AUC': [f"{test_roc_auc:.4f}"]
+    }
+    summary_df = pd.DataFrame(summary_data)
 
+    fig2, ax2 = plt.subplots(figsize=(12, 1.2))
+    ax2.axis('off')
+    tbl = ax2.table(
+        cellText=summary_df.values,
+        colLabels=summary_df.columns,
+        cellLoc='center',
+        loc='center')
+    tbl.auto_set_font_size(False)
+    tbl.set_fontsize(10)
+    tbl.scale(1, 1.8)
+    for (row, col), cell in tbl.get_celld().items():
+        if row == 0:
+            cell.set_facecolor('#1a3f5c')
+            cell.set_text_props(color='white', fontweight='bold')
+        else:
+            cell.set_facecolor('#cce0f0')
+    ax2.set_title('Final Test Score Summary', fontsize=11, fontweight='bold', pad=12)
+    plt.tight_layout()
+    plt.show()
 
-
-
-
-
+    return {
+        'best_threshold': best_threshold,
+        'threshold_analysis': threshold_df,
+        'confusion_matrix': cm,
+        'macro_f1': test_macro_f1,
+        'roc_auc': test_roc_auc}
 
