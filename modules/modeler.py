@@ -368,7 +368,6 @@ def tune_r_forest(X_train, y_train, X_valid, y_valid):
         'model__max_features': ['sqrt'],
         'model__min_samples_leaf': [1, 2]
     }
-    # 2×3×2×1×2 = 24 combos × 3 CV = 72 fits
 
     grid_search = GridSearchCV(
         estimator=r_forest_pipeline,
@@ -409,9 +408,6 @@ def tune_xgboost(X_train, y_train, X_valid, y_valid):
         'model__min_child_weight': [1, 5, 10],
         'model__subsample': [0.8]
     }
-    # 2×3×2×3×1 = 36 combos × 3 CV = 108 fits
-    # ~12–15 mins
-
     grid_search = GridSearchCV(
         estimator=xgboost_pipeline,
         param_grid=params,

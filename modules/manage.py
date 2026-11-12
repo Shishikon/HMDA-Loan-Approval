@@ -67,17 +67,17 @@ X_train, X_valid, y_train, y_valid = train_test_split(
 
 # ============================== Tuning — All Four Models ==============================
 
-log_best_model, log_best_params, log_cv, log_eval = tune_log_reg(X_train, y_train, X_valid, y_valid)
-d_tree_best_model, d_tree_best_params, d_tree_cv, d_tree_eval = tune_dec_tree(X_train, y_train, X_valid, y_valid)
-r_forest_best_model, r_forest_best_params, r_forest_cv, r_forest_eval = tune_r_forest(X_train, y_train, X_valid, y_valid)
-xgb_best_model, xgb_best_params, xgb_cv, xgb_eval = tune_xgboost(X_train, y_train, X_valid, y_valid)
+# log_best_model, log_best_params, log_cv, log_eval = tune_log_reg(X_train, y_train, X_valid, y_valid)
+# d_tree_best_model, d_tree_best_params, d_tree_cv, d_tree_eval = tune_dec_tree(X_train, y_train, X_valid, y_valid)
+# r_forest_best_model, r_forest_best_params, r_forest_cv, r_forest_eval = tune_r_forest(X_train, y_train, X_valid, y_valid)
+# xgb_best_model, xgb_best_params, xgb_cv, xgb_eval = tune_xgboost(X_train, y_train, X_valid, y_valid)
 
 # ============================== Validation Comparison ==============================
 
-comparison = pd.DataFrame([log_eval, d_tree_eval, r_forest_eval, xgb_eval])
-comparison[['model', 'macro_f1', 'roc_auc', 'balanced_accuracy']].sort_values(
-    by='macro_f1', ascending=False)
-print(comparison.to_string())
+# comparison = pd.DataFrame([log_eval, d_tree_eval, r_forest_eval, xgb_eval])
+# comparison[['model', 'macro_f1', 'roc_auc', 'balanced_accuracy']].sort_values(
+#     by='macro_f1', ascending=False)
+# print(comparison.to_string())
 
 # ============================== Final Test Evaluation ==============================
 
@@ -92,10 +92,10 @@ print(comparison.to_string())
 # print(test_results)
 
 
-plot_confusion_matrix(log_best_model, X_valid, y_valid, 'Logistic Regression (Tuned)')
-plot_confusion_matrix(d_tree_best_model, X_valid, y_valid, 'Decision Tree (Tuned)')
-plot_confusion_matrix(r_forest_best_model, X_valid, y_valid, 'Random Forest (Tuned)')
-plot_confusion_matrix(xgb_best_model, X_valid, y_valid, 'XGBoost (Tuned)')
+# plot_confusion_matrix(log_best_model, X_valid, y_valid, 'Logistic Regression (Tuned)')
+# plot_confusion_matrix(d_tree_best_model, X_valid, y_valid, 'Decision Tree (Tuned)')
+# plot_confusion_matrix(r_forest_best_model, X_valid, y_valid, 'Random Forest (Tuned)')
+# plot_confusion_matrix(xgb_best_model, X_valid, y_valid, 'XGBoost (Tuned)')
 
 
 
