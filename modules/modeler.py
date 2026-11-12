@@ -300,7 +300,7 @@ def tune_log_reg(X_train, y_train, X_valid, y_valid):
             random_state=RANDOM_STATE))])
 
     params = {
-        'model__C': [0.01, 1, 100],
+        'model__C': [0.01, 1, 10, 100],
         'model__class_weight': [None, 'balanced']
     }
 
@@ -330,7 +330,7 @@ def tune_dec_tree(X_train, y_train, X_valid, y_valid):
 
     params = {
         'model__max_depth': [5, 10, 20],
-        'model__class_weight': ['balanced'],
+        'model__class_weight': [None, 'balanced'],
         'model__min_samples_leaf': [1, 5],
         'model__criterion': ['gini', 'entropy']}
 
@@ -362,10 +362,13 @@ def tune_r_forest(X_train, y_train, X_valid, y_valid):
             n_jobs=-1))])
 
     params = {
-        'model__n_estimators': [100, 300],
-        'model__max_depth': [10, None],
+        'model__n_estimators': [200, 300],
+        'model__max_depth': [10, 20, None],
         'model__class_weight': ['balanced', 'balanced_subsample'],
-        'model__max_features': ['sqrt']}
+        'model__max_features': ['sqrt'],
+        'model__min_samples_leaf': [1, 2]
+    }
+    # 2×3×2×1×2 = 24 combos × 3 CV = 72 fits
 
     grid_search = GridSearchCV(
         estimator=r_forest_pipeline,
@@ -388,17 +391,26 @@ def tune_r_forest(X_train, y_train, X_valid, y_valid):
 
 
 def tune_xgboost(X_train, y_train, X_valid, y_valid):
-    xgboost_pipeline = Pipeline(steps=[
+    from imblearn.pipeline import Pipeline as ImbPipeline
+    from imblearn.over_sampling import SMOTE
+    xgboost_pipeline = ImbPipeline(steps=[
         ('preprocessor', preprocessor_not_scaled),
+        ('smote', SMOTE(random_state=RANDOM_STATE)),
         ('model', XGBClassifier(
             random_state=RANDOM_STATE,
-            n_jobs=-1))])
+            n_jobs=-1,
+            max_delta_step=1))
+    ])
 
     params = {
-        'model__n_estimators': [100, 300],
-        'model__max_depth': [3, 5],
-        'model__learning_rate': [0.05, 0.1, 0.2]
+        'model__n_estimators': [300, 500],
+        'model__max_depth': [3, 5, 7],
+        'model__learning_rate': [0.05, 0.1],
+        'model__min_child_weight': [1, 5, 10],
+        'model__subsample': [0.8]
     }
+    # 2×3×2×3×1 = 36 combos × 3 CV = 108 fits
+    # ~12–15 mins
 
     grid_search = GridSearchCV(
         estimator=xgboost_pipeline,

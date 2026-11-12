@@ -78,6 +78,7 @@ comparison = pd.DataFrame([log_eval, d_tree_eval, r_forest_eval, xgb_eval])
 comparison[['model', 'macro_f1', 'roc_auc', 'balanced_accuracy']].sort_values(
     by='macro_f1', ascending=False)
 print(comparison.to_string())
+
 # ============================== Final Test Evaluation ==============================
 
 # test_results = evaluate_winner_on_test(
@@ -91,10 +92,10 @@ print(comparison.to_string())
 # print(test_results)
 
 
-# plot_confusion_matrix(log_model, X_valid, y_valid, 'Logistic Regression (Tuned)')
-# plot_confusion_matrix(dt_model, X_valid, y_valid, 'Decision Tree (Tuned)')
-# plot_confusion_matrix(rf_model, X_valid, y_valid, 'Random Forest (Tuned)')
-# plot_confusion_matrix(xgb_model, X_valid, y_valid, 'XGBoost (Tuned)')
+plot_confusion_matrix(log_best_model, X_valid, y_valid, 'Logistic Regression (Tuned)')
+plot_confusion_matrix(d_tree_best_model, X_valid, y_valid, 'Decision Tree (Tuned)')
+plot_confusion_matrix(r_forest_best_model, X_valid, y_valid, 'Random Forest (Tuned)')
+plot_confusion_matrix(xgb_best_model, X_valid, y_valid, 'XGBoost (Tuned)')
 
 
 
